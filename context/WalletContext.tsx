@@ -1,5 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { useAccount, useDisconnect, useChainId as useWagmiChainId } from "wagmi";
 
 interface WalletContextValue {
   address: `0x${string}` | undefined;
@@ -30,8 +31,11 @@ export interface VirtualCardData {
 const WalletContext = createContext<WalletContextValue | null>(null);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
+  const { address: wagmiAddress, isConnected: wagmiConnected, isConnecting: wagmiConnecting } = useAccount();
+  const { disconnect: wagmiDisconnect } = useDisconnect();
+  const wagmiChainId = useWagmiChainId();
+
   const [address, setAddress] = useState<`0x${string}` | undefined>(undefined);
-  const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [chainId, setChainId] = useState<number | undefined>(undefined);
   const [username, setUsernameState] = useState<string | null>(null);
@@ -40,17 +44,37 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [rubBalance, setRubBalanceState] = useState("0");
   const [onboardingComplete, setOnboardingCompleteState] = useState(false);
 
-  // Restore from localStorage
+  // Sync wagmi state to context
+  useEffect(() => {
+    if (wagmiAddress) {
+      setAddress(wagmiAddress);
+      localStorage.setItem("rubbi_wallet", JSON.stringify({ address: wagmiAddress, chainId: wagmiChainId }));
+    }
+  }, [wagmiAddress, wagmiChainId]);
+
+  useEffect(() => {
+    setChainId(wagmiChainId);
+    const stored = localStorage.getItem("rubbi_wallet");
+    if (stored && wagmiConnected) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.chainId !== wagmiChainId) {
+          localStorage.setItem("rubbi_wallet", JSON.stringify({ address: wagmiAddress, chainId: wagmiChainId }));
+        }
+      } catch {}
+    }
+  }, [wagmiChainId, wagmiConnected, wagmiAddress]);
+
+  // Restore from localStorage on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
+    
     const stored = localStorage.getItem("rubbi_wallet");
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
         if (parsed.address) {
-          setAddress(parsed.address);
-          setIsConnected(true);
-          setChainId(parsed.chainId);
+          // Address will be set from wagmi when wallet connects
         }
       } catch {}
     }
@@ -65,57 +89,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const connect = async () => {
-    if (typeof window === "undefined") return;
+    // Wallet connection is handled by wagmi, this is just for triggering the modal
+    // The actual connection happens via the Web3Provider
     setIsConnecting(true);
-    try {
-      // Try MetaMask / injected wallet
-      if ((window as any).ethereum) {
-        const accounts: string[] = await (window as any).ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        if (accounts.length > 0) {
-          const addr = accounts[0] as `0x${string}`;
-          const chainIdHex = await (window as any).ethereum.request({ method: "eth_chainId" });
-          const cId = parseInt(chainIdHex, 16);
-          setAddress(addr);
-          setIsConnected(true);
-          setChainId(cId);
-          localStorage.setItem("rubbi_wallet", JSON.stringify({ address: addr, chainId: cId }));
-
-          // Listen for account/chain changes
-          (window as any).ethereum.on("accountsChanged", (accs: string[]) => {
-            if (accs.length === 0) {
-              setAddress(undefined);
-              setIsConnected(false);
-              localStorage.removeItem("rubbi_wallet");
-            } else {
-              setAddress(accs[0] as `0x${string}`);
-            }
-          });
-          (window as any).ethereum.on("chainChanged", (hex: string) => {
-            setChainId(parseInt(hex, 16));
-          });
-        }
-      } else {
-        // Demo mode - generate a mock address for testing
-        const mockAddr = `0x${Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}` as `0x${string}`;
-        setAddress(mockAddr);
-        setIsConnected(true);
-        setChainId(10143); // Monad testnet
-        localStorage.setItem("rubbi_wallet", JSON.stringify({ address: mockAddr, chainId: 10143 }));
-      }
-    } catch (err) {
-      console.error("Wallet connection error:", err);
-    } finally {
-      setIsConnecting(false);
-    }
+    setTimeout(() => setIsConnecting(false), 1000);
   };
 
   const disconnect = () => {
+    wagmiDisconnect();
     setAddress(undefined);
-    setIsConnected(false);
     setChainId(undefined);
     localStorage.removeItem("rubbi_wallet");
+    localStorage.removeItem("rubbi_token");
   };
 
   const setUsername = (name: string) => {
@@ -142,10 +127,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   return (
     <WalletContext.Provider
       value={{
-        address,
-        isConnected,
-        isConnecting,
-        chainId,
+        address: wagmiAddress,
+        isConnected: wagmiConnected,
+        isConnecting: wagmiConnecting || isConnecting,
+        chainId: wagmiChainId,
         connect,
         disconnect,
         username,

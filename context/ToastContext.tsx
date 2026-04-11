@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { Toast, ToastType } from "@/types";
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react";
 
@@ -11,9 +11,12 @@ interface ToastContextValue {
   warning: (title: string, message?: string) => void;
   info: (title: string, message?: string) => void;
   dismiss: (id: string) => void;
+  showToast: (type: ToastType, title: string, message?: string) => void;
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null);
+
+let toastIdRef = 0;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -24,7 +27,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const toast = useCallback(
     (type: ToastType, title: string, message?: string, duration = 4500) => {
-      const id = `toast-${Date.now()}-${Math.random()}`;
+      const id = `toast-${++toastIdRef}`;
       setToasts((prev) => [...prev, { id, type, title, message, duration }]);
       setTimeout(() => dismiss(id), duration);
     },
@@ -41,6 +44,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         warning: (t, m) => toast("warning", t, m),
         info: (t, m) => toast("info", t, m),
         dismiss,
+        showToast: (type, title, message) => toast(type, title, message),
       }}
     >
       {children}

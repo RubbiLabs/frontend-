@@ -1,31 +1,91 @@
 "use client";
+
 import React, { useState } from "react";
-import { CreditCard, ChevronRight, CheckCircle, Lock, Shield } from "lucide-react";
+import { CreditCard, ChevronRight, CheckCircle, Lock, Shield, Loader2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
+import { api, setToken } from "@/lib/api";
 
 interface Props { open: boolean; onClose: () => void; onComplete?: () => void; }
 
 export default function VirtualCardModal({ open, onClose, onComplete }: Props) {
-  const { username, setVirtualCardData, hasVirtualCard } = useWallet();
-  const { success, error } = useToast();
+  const { username, setVirtualCardData, address } = useWallet();
+  const { toast } = useToast();
   const [usernameInput, setUsernameInput] = useState(username || "");
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
+  const [cardData, setCardData] = useState<{ lastFour: string; expiry: string } | null>(null);
 
   const handleGenerate = async () => {
-    if (!usernameInput.trim()) { error("Username Required", "Please enter your username to generate your virtual card."); return; }
+    if (!usernameInput.trim()) {
+      toast("error", "Username Required", "Please enter your username to generate your virtual card.");
+      return;
+    }
+
+    if (!address) {
+      toast("error", "Wallet Not Connected", "Please connect your wallet first.");
+      return;
+    }
+
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1500));
+
+    try {
+      // Sign a message to prove wallet ownership
+      const message = `Register on Rubbi as ${usernameInput.toLowerCase()}`;
+      const signature = await (window as any).ethereum?.request({
+        method: "personal_sign",
+        params: [message, address],
+      });
+
+      // Call API to register
+      const result = await api.auth.register(address, signature || "0x");
+
+      if (result.error) {
+        toast("error", "Registration Failed", result.error);
+        // Fallback to local generation if API fails
+        await generateLocalCard();
+        return;
+      }
+
+      if (result.data) {
+        setToken(result.data.token);
+        
+        // Set card data from API response
+        setVirtualCardData({
+          cardHolder: usernameInput.toUpperCase(),
+          lastFour: result.data.user.cardLastFour,
+          expiry: result.data.user.cardExpiry,
+          network: "MONAD L1",
+        });
+        
+        setCardData({
+          lastFour: result.data.user.cardLastFour,
+          expiry: result.data.user.cardExpiry,
+        });
+        
+        setGenerated(true);
+        toast("success", "Virtual Card Generated!", "You can now subscribe to services using your Rubbi card.");
+      }
+    } catch (err: any) {
+      // Fallback to local generation if error
+      console.error("API error, using local generation:", err);
+      await generateLocalCard();
+    }
+
+    setLoading(false);
+  };
+
+  const generateLocalCard = async () => {
+    await new Promise(r => setTimeout(r, 500));
     const lastFour = Math.floor(1000 + Math.random() * 9000).toString();
     const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, "0");
     const year = (new Date().getFullYear() + 4).toString().slice(-2);
     setVirtualCardData({ cardHolder: usernameInput.toUpperCase(), lastFour, expiry: `${month}/${year}`, network: "MONAD L1" });
+    setCardData({ lastFour, expiry: `${month}/${year}` });
     setGenerated(true);
-    success("Virtual Card Generated!", "You can now subscribe to services using your Rubbi card.");
-    setLoading(false);
+    toast("success", "Virtual Card Generated!", "You can now subscribe to services using your Rubbi card.");
   };
 
   const handleContinue = () => {
@@ -62,7 +122,6 @@ export default function VirtualCardModal({ open, onClose, onComplete }: Props) {
               </div>
             </div>
 
-            {/* Preview card */}
             <div className="bg-primary rounded-2xl p-5 card-shine">
               <p className="text-xs text-white/50 uppercase tracking-widest mb-3">Rubbi Virtual Card</p>
               <div className="w-9 h-6 bg-yellow-400/80 rounded mb-4" />
@@ -79,7 +138,7 @@ export default function VirtualCardModal({ open, onClose, onComplete }: Props) {
             </div>
 
             <Button size="lg" fullWidth loading={loading} icon={<CreditCard size={16} />} onClick={handleGenerate}>
-              Generate Virtual Card
+              {loading ? "Creating Card..." : "Generate Virtual Card"}
             </Button>
           </>
         ) : (
@@ -94,10 +153,10 @@ export default function VirtualCardModal({ open, onClose, onComplete }: Props) {
             <div className="bg-primary rounded-2xl p-5 card-shine text-left">
               <p className="text-xs text-white/50 uppercase tracking-widest mb-3">Rubbi Virtual Card</p>
               <div className="w-9 h-6 bg-yellow-400/80 rounded mb-4" />
-              <p className="font-mono text-white tracking-widest mb-4">•••• •••• •••• 8291</p>
+              <p className="font-mono text-white tracking-widest mb-4">•••• •••• •••• {cardData?.lastFour}</p>
               <div className="flex justify-between">
                 <div><p className="text-xs text-white/40">CARD HOLDER</p><p className="text-sm font-bold text-white">{usernameInput.toUpperCase()}</p></div>
-                <div className="text-right"><p className="text-xs text-white/40">EXPIRES</p><p className="text-sm font-bold text-white">12/28</p></div>
+                <div className="text-right"><p className="text-xs text-white/40">EXPIRES</p><p className="text-sm font-bold text-white">{cardData?.expiry}</p></div>
               </div>
             </div>
             <Button size="lg" fullWidth icon={<ChevronRight size={16} />} iconPosition="right" onClick={handleContinue}>

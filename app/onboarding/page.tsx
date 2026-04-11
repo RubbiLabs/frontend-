@@ -17,14 +17,33 @@ const steps = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { isConnected, setOnboardingComplete } = useWallet();
+  const { isConnected, onboardingComplete, setOnboardingComplete } = useWallet();
   const [step, setStep] = useState<Step>(1);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!isConnected) router.replace("/");
-  }, [isConnected, router]);
+    setMounted(true);
+  }, []);
 
-  if (!isConnected) return null;
+  useEffect(() => {
+    if (!mounted) return;
+    if (!isConnected) {
+      router.replace("/");
+    } else if (onboardingComplete) {
+      router.replace("/dashboard");
+    }
+  }, [mounted, isConnected, onboardingComplete, router]);
+
+  if (!mounted || !isConnected || onboardingComplete) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-neutral-100">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-neutral-500 text-sm">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   const finish = () => {
     setOnboardingComplete(true);

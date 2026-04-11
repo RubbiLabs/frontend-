@@ -1,9 +1,11 @@
 "use client";
-import React, { useState } from "react";
-import { CheckCircle, CreditCard, Lock, Shield, ChevronRight, Wallet } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { CheckCircle, CreditCard, Lock, Shield, ChevronRight, Wallet, Loader2 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
+import { useAccount } from "wagmi";
+import { api, setToken } from "@/lib/api";
 
 interface Props {
   onComplete: () => void;
@@ -29,18 +31,72 @@ const features = [
 ];
 
 export default function Step3VirtualCard({ onComplete, onSkip }: Props) {
-  const { username, setVirtualCardData } = useWallet();
-  const { success } = useToast();
+  const { username, setVirtualCardData, setOnboardingComplete } = useWallet();
+  const { toast } = useToast();
+  const { address } = useAccount();
 
   const [loading, setLoading] = useState(false);
   const [generated, setGenerated] = useState(false);
   const [cardLastFour, setCardLastFour] = useState("────");
   const [cardExpiry, setCardExpiry] = useState("--/--");
 
-  const handleGenerate = async () => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 1600));
+  useEffect(() => {
+    const existingCard = localStorage.getItem("rubbi_virtual_card");
+    if (existingCard) {
+      const card = JSON.parse(existingCard);
+      setCardLastFour(card.lastFour);
+      setCardExpiry(card.expiry);
+      setGenerated(true);
+    }
+  }, []);
 
+  const handleGenerate = async () => {
+    if (!address) {
+      toast("error", "Wallet Not Connected", "Please connect your wallet first.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const message = `Register on Rubbi as ${(username || "user").toLowerCase()}`;
+      let signature = "0x";
+      
+      if ((window as any).ethereum) {
+        signature = await (window as any).ethereum.request({
+          method: "personal_sign",
+          params: [message, address],
+        });
+      }
+
+      const result = await api.auth.register(address, signature);
+
+      if (result.data) {
+        setToken(result.data.token);
+        setCardLastFour(result.data.user.cardLastFour);
+        setCardExpiry(result.data.user.cardExpiry);
+        setVirtualCardData({
+          cardHolder: (username || "User").toUpperCase(),
+          lastFour: result.data.user.cardLastFour,
+          expiry: result.data.user.cardExpiry,
+          network: "MONAD L1",
+        });
+        setGenerated(true);
+        toast("success", "Virtual Card Generated!", "You can now subscribe to services.");
+      } else if (result.error) {
+        toast("error", "Registration Failed", result.error);
+        await generateLocalCard();
+      }
+    } catch (err) {
+      console.error("API error, using local generation:", err);
+      await generateLocalCard();
+    }
+
+    setLoading(false);
+  };
+
+  const generateLocalCard = async () => {
+    await new Promise((r) => setTimeout(r, 500));
     const lastFour = String(Math.floor(1000 + Math.random() * 9000));
     const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, "0");
     const year = (new Date().getFullYear() + 4).toString().slice(-2);
@@ -54,17 +110,20 @@ export default function Step3VirtualCard({ onComplete, onSkip }: Props) {
       expiry,
       network: "MONAD L1",
     });
-
     setGenerated(true);
-    success("Virtual Card Generated!", "You can now subscribe to services.");
-    setLoading(false);
+    setOnboardingComplete(true);
+    toast("success", "Virtual Card Generated!", "You can now subscribe to services.");
+  };
+
+  const handleContinue = () => {
+    setOnboardingComplete(true);
+    onComplete();
   };
 
   const cardHolder = (username || "username").toUpperCase();
 
   return (
     <div className="bg-white rounded-2xl shadow-card border border-neutral-100 p-8 animate-scaleIn">
-      {/* Heading */}
       <p className="text-[10px] font-bold uppercase tracking-widest text-primary/60 mb-1">
         Onboarding Step 3
       </p>
@@ -76,7 +135,6 @@ export default function Step3VirtualCard({ onComplete, onSkip }: Props) {
         for use immediately.
       </p>
 
-      {/* Feature list */}
       <div className="space-y-4 mb-7">
         {features.map((f) => (
           <div key={f.title} className="flex gap-3">
@@ -91,29 +149,19 @@ export default function Step3VirtualCard({ onComplete, onSkip }: Props) {
         ))}
       </div>
 
-      {/* Card preview */}
       <div
         className={`bg-primary rounded-2xl p-6 mb-6 card-shine relative overflow-hidden transition-all duration-500 ${
           generated ? "ring-2 ring-green-400 ring-offset-2" : ""
         }`}
       >
-        {/* Wave decoration */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <svg viewBox="0 0 300 120" className="absolute bottom-0 w-full">
-            <path
-              d="M0 60 Q75 20 150 60 Q225 100 300 60 L300 120 L0 120 Z"
-              fill="white"
-            />
-            <path
-              d="M0 75 Q75 35 150 75 Q225 115 300 75 L300 120 L0 120 Z"
-              fill="white"
-              opacity="0.5"
-            />
+            <path d="M0 60 Q75 20 150 60 Q225 100 300 60 L300 120 L0 120 Z" fill="white" />
+            <path d="M0 75 Q75 35 150 75 Q225 115 300 75 L300 120 L0 120 Z" fill="white" opacity="0.5" />
           </svg>
         </div>
 
         <div className="relative z-10">
-          {/* Header row */}
           <div className="flex items-center justify-between mb-7">
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">
               Virtual Debit
@@ -123,15 +171,12 @@ export default function Step3VirtualCard({ onComplete, onSkip }: Props) {
             </div>
           </div>
 
-          {/* Chip */}
           <div className="w-10 h-7 bg-yellow-400/80 rounded-md mb-4" />
 
-          {/* Card number */}
           <p className="font-mono text-white text-base tracking-widest mb-5">
             •••• •••• •••• {cardLastFour}
           </p>
 
-          {/* Bottom row */}
           <div className="flex items-end justify-between">
             <div>
               <p className="text-[9px] text-white/40 uppercase tracking-wider mb-0.5">
@@ -148,7 +193,6 @@ export default function Step3VirtualCard({ onComplete, onSkip }: Props) {
           </div>
         </div>
 
-        {/* "Ready to Issue" badge */}
         {generated && (
           <div className="absolute bottom-4 right-4 bg-white rounded-xl px-3 py-2 shadow-lg flex items-center gap-2 z-20">
             <CheckCircle size={14} className="text-green-500" />
@@ -157,7 +201,6 @@ export default function Step3VirtualCard({ onComplete, onSkip }: Props) {
         )}
       </div>
 
-      {/* Actions */}
       {!generated ? (
         <>
           <Button
@@ -167,7 +210,7 @@ export default function Step3VirtualCard({ onComplete, onSkip }: Props) {
             icon={<CreditCard size={16} />}
             onClick={handleGenerate}
           >
-            Generate Card
+            {loading ? "Creating Card..." : "Generate Card"}
           </Button>
           <p className="text-center text-xs text-neutral-400 mt-3">
             By clicking generate, you agree to our Cardholder Agreement.
@@ -179,7 +222,7 @@ export default function Step3VirtualCard({ onComplete, onSkip }: Props) {
           fullWidth
           icon={<ChevronRight size={16} />}
           iconPosition="right"
-          onClick={onComplete}
+          onClick={handleContinue}
         >
           Continue to Dashboard
         </Button>

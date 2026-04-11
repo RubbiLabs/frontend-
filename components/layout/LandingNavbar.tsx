@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, Wallet, ChevronDown } from "lucide-react";
+import { Menu, X, Wallet } from "lucide-react";
+import { useAccount, useConnect } from "wagmi";
 import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
 import Button from "@/components/ui/Button";
@@ -12,8 +13,10 @@ export default function LandingNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { isConnected, connect, isConnecting, address } = useWallet();
-  const { success, error } = useToast();
+  const { isConnected } = useAccount();
+  const { connectors, connect } = useConnect();
+  const { setOnboardingComplete } = useWallet();
+  const { toast } = useToast();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -21,13 +24,19 @@ export default function LandingNavbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const handleConnect = async () => {
-    try {
-      await connect();
-      success("Wallet Connected", "Welcome to Rubbi Protocol.");
-      router.push("/onboarding");
-    } catch {
-      error("Connection Failed", "Could not connect wallet. Please try again.");
+  const handleConnect = () => {
+    const connector = connectors.find(c => c.type === "injected");
+    if (connector) {
+      connect({ connector });
+      // Check if user has completed onboarding before
+      const onboarded = localStorage.getItem("rubbi_onboarding_complete");
+      if (onboarded === "true") {
+        router.push("/dashboard");
+      } else {
+        router.push("/onboarding");
+      }
+    } else {
+      toast("error", "No Wallet Found", "Please install a wallet like MetaMask.");
     }
   };
 
@@ -94,7 +103,6 @@ export default function LandingNavbar() {
                 variant="primary"
                 size="md"
                 icon={<Wallet size={16} />}
-                loading={isConnecting}
                 onClick={handleConnect}
               >
                 Connect Wallet
@@ -144,7 +152,6 @@ export default function LandingNavbar() {
                 size="md"
                 fullWidth
                 icon={<Wallet size={16} />}
-                loading={isConnecting}
                 onClick={() => { setMobileOpen(false); handleConnect(); }}
               >
                 Connect Wallet
