@@ -1,4 +1,4 @@
-export type IntervalType = 0 | 1 | 2; // None, Daily, Monthly
+export type IntervalType = 0 | 1 | 2; // None, Daily, and Monthly
 
 export interface Stream {
   id: bigint;
