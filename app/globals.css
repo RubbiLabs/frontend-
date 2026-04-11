@@ -1,22 +1,22 @@
 /* =========================
-   ✅ Google Font (MUST be first)
+   Google Font
 ========================= */
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap');
 
 /* =========================
-   ✅ Tailwind Directives
+   Tailwind Directives
 ========================= */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* =========================
-   ✅ Theme Variables
+   Force Light Mode Always
 ========================= */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-
+  color-scheme: light;
+  --background: #F7F7F2;
+  --foreground: #1A1A17;
   --primary: #22577A;
   --secondary: #385F71;
   --tertiary: #8C7851;
@@ -24,17 +24,7 @@
 }
 
 /* =========================
-   ✅ Dark Mode
-========================= */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-/* =========================
-   ✅ Reset & Base Styles
+   Reset & Base Styles
 ========================= */
 * {
   box-sizing: border-box;
@@ -48,13 +38,14 @@ html {
 
 body {
   font-family: 'Manrope', sans-serif;
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: #F7F7F2;
+  color: #1A1A17;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* =========================
-   ✅ Scrollbar Styling
+   Scrollbar Styling
 ========================= */
 ::-webkit-scrollbar {
   width: 6px;
@@ -75,7 +66,7 @@ body {
 }
 
 /* =========================
-   ✅ Selection Styling
+   Selection Styling
 ========================= */
 ::selection {
   background: rgba(34, 87, 122, 0.2);
@@ -83,11 +74,12 @@ body {
 }
 
 /* =========================
-   ✅ Utility Classes
+   Utility Classes
 ========================= */
 .glass {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .text-gradient {
@@ -98,7 +90,7 @@ body {
 }
 
 /* =========================
-   ✅ PIN Input Styling
+   PIN Input Styling
 ========================= */
 .pin-input {
   width: 44px;
@@ -126,7 +118,7 @@ body {
 }
 
 /* =========================
-   ✅ Card Shine Animation
+   Card Shine Animation
 ========================= */
 .card-shine {
   position: relative;
@@ -150,16 +142,12 @@ body {
 }
 
 @keyframes cardShine {
-  0% {
-    left: -60%;
-  }
-  100% {
-    left: 160%;
-  }
+  0%   { left: -60%; }
+  100% { left: 160%; }
 }
 
 /* =========================
-   ✅ Toast Animations
+   Toast Animations
 ========================= */
 .toast-enter {
   animation: slideInRight 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -170,75 +158,66 @@ body {
 }
 
 @keyframes slideInRight {
-  from {
-    transform: translateX(110%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+  from { transform: translateX(110%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
 
 @keyframes slideOutRight {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(110%);
-    opacity: 0;
-  }
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(110%); opacity: 0; }
 }
 
 /* =========================
-   ✅ Misc Animations
+   Keyframe Definitions
 ========================= */
-@keyframes ticker {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
 @keyframes fadeIn {
   from { opacity: 0; }
-  to { opacity: 1; }
+  to   { opacity: 1; }
 }
 
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0);    }
 }
 
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+  to   { opacity: 1; transform: translateY(0);     }
 }
 
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  to   { opacity: 1; transform: scale(1);    }
+}
+
+@keyframes ticker {
+  from { transform: translateX(0);    }
+  to   { transform: translateX(-50%); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
 }
 
 /* =========================
-   ✅ Animation Utility Classes
+   Animation Utility Classes
 ========================= */
-.animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
-.animate-slideUp { animation: slideUp 0.5s ease-out forwards; }
-.animate-slideDown { animation: slideDown 0.3s ease-out forwards; }
-.animate-scaleIn { animation: scaleIn 0.3s ease-out forwards; }
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.5s ease-out forwards;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.3s ease-out forwards;
+}
 
 .animate-ticker {
   animation: ticker 20s linear infinite;
@@ -247,16 +226,24 @@ body {
 .animate-shimmer {
   background: linear-gradient(
     90deg,
-    rgba(255,255,255,0) 0%,
-    rgba(255,255,255,0.4) 50%,
-    rgba(255,255,255,0) 100%
+    rgba(255, 255, 255, 0)   0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    rgba(255, 255, 255, 0)   100%
   );
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
 
 /* =========================
-   ✅ Recharts Styling Fix
+   Ticker Tape
+========================= */
+.ticker-wrap {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* =========================
+   Recharts Override
 ========================= */
 .recharts-cartesian-axis-tick-value {
   font-family: 'Manrope', sans-serif !important;
