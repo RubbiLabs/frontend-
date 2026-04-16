@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  RectangleHorizontal,
   CreditCard,
   Repeat2,
   Wallet,
@@ -13,6 +14,7 @@ import {
 export const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/subscriptions", label: "Subscriptions", icon: CreditCard },
+  { href: "/dashboard/card", label: "Card", icon: RectangleHorizontal },
   { href: "/dashboard/salary-streams", label: "Salary Streams", icon: Repeat2 },
   { href: "/dashboard/wallet", label: "Wallet", icon: Wallet },
 ];

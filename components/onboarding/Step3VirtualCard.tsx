@@ -106,9 +106,12 @@ export default function Step3VirtualCard({ onComplete, onSkip }: Props) {
     setCardExpiry(expiry);
     setVirtualCardData({
       cardHolder: (username || "User").toUpperCase(),
+      cardNumber: `5234 ${String(Math.floor(1000 + Math.random() * 9000))} ${String(Math.floor(1000 + Math.random() * 9000))} ${lastFour}`,
       lastFour,
       expiry,
+      cvv: String(Math.floor(100 + Math.random() * 900)),
       network: "MONAD L1",
+      isActive: true,
     });
     setGenerated(true);
     setOnboardingComplete(true);

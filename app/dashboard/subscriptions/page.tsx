@@ -127,6 +127,12 @@ export default function SubscriptionsPage() {
       setCardModalOpen(true);
       return;
     }
+
+    if (!virtualCardData?.isActive) {
+      error("Card Inactive", "Reactivate your virtual card from the Card page before starting a new subscription.");
+      return;
+    }
+
     doSubscribe(item);
   };
 
@@ -175,36 +181,6 @@ export default function SubscriptionsPage() {
           </Button>
         </div> */}
       </div>
-
-      {hasVirtualCard && virtualCardData && (
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <div className="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-2">Saved Subscription Card</p>
-              <h2 className="text-lg font-bold text-neutral-900">Ready for instant checkout</h2>
-              <p className="text-sm text-neutral-500 mt-1">This wallet already has a Rubbi card, so new subscriptions can start immediately.</p>
-            </div>
-            <div className="bg-primary rounded-2xl p-5 min-w-[280px] card-shine">
-              <p className="text-xs text-white/50 uppercase tracking-widest mb-3">Rubbi Virtual Card</p>
-              <p className="font-mono text-white tracking-widest mb-4">{virtualCardData.cardNumber}</p>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <p className="text-xs text-white/40">HOLDER</p>
-                  <p className="text-sm font-bold text-white">{virtualCardData.cardHolder}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-white/40">EXP</p>
-                  <p className="text-sm font-bold text-white">{virtualCardData.expiry}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-white/40">CVV</p>
-                  <p className="text-sm font-bold text-white">{virtualCardData.cvv}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Active Subscriptions */}
       <div ref={activeSubscriptionsRef}>

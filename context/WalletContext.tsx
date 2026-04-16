@@ -15,6 +15,7 @@ interface WalletContextValue {
   setHasVirtualCard: (val: boolean) => void;
   virtualCardData: VirtualCardData | null;
   setVirtualCardData: (data: VirtualCardData) => void;
+  setVirtualCardActive: (val: boolean) => void;
   rubBalance: string;
   setRubBalance: (val: string) => void;
   onboardingComplete: boolean;
@@ -28,6 +29,7 @@ export interface VirtualCardData {
   expiry: string;
   cvv: string;
   network: string;
+  isActive: boolean;
 }
 
 const WALLET_KEY = "rubbi_wallet";
@@ -86,6 +88,7 @@ function normalizeVirtualCardData(raw: Partial<VirtualCardData> | null | undefin
     cvv,
     network:
       typeof raw.network === "string" && raw.network.trim() ? raw.network.trim() : "MONAD L1",
+    isActive: raw.isActive !== false,
   };
 }
 
@@ -315,6 +318,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     writeWalletScopedValue(CARDS_KEY, normalized);
   };
 
+  const setVirtualCardActive = (val: boolean) => {
+    setVirtualCardDataState((current) => {
+      if (!current) return current;
+      const nextCard = { ...current, isActive: val };
+      writeWalletScopedValue(CARDS_KEY, nextCard);
+      return nextCard;
+    });
+  };
+
   const setRubBalance = (val: string) => {
     setRubBalanceState(val);
     writeWalletScopedValue(BALANCES_KEY, val);
@@ -341,6 +353,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         setHasVirtualCard,
         virtualCardData,
         setVirtualCardData,
+        setVirtualCardActive,
         rubBalance,
         setRubBalance,
         onboardingComplete,
