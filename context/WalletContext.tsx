@@ -93,11 +93,8 @@ function normalizeVirtualCardData(raw: Partial<VirtualCardData> | null | undefin
 }
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const { address: wagmiAddress, isConnected: wagmiConnected, isConnecting: wagmiConnecting } = useAccount();
-  const { disconnect: wagmiDisconnect } = useDisconnect();
-  const wagmiChainId = useWagmiChainId();
-
   const [address, setAddress] = useState<`0x${string}` | undefined>(undefined);
+  const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   const [chainId, setChainId] = useState<number | undefined>(undefined);
@@ -212,7 +209,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (
         !persistedCard ||
         persistedCard.cardNumber !== normalizedCard.cardNumber ||
-        persistedCard.cvv !== normalizedCard.cvv
+        persistedCard.cvv !== normalizedCard.cvv ||
+        persistedCard.isActive !== normalizedCard.isActive
       ) {
         writeWalletScopedValue(CARDS_KEY, normalizedCard, address);
       }
@@ -223,8 +221,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [address, isHydrated]);
 
   const connect = async () => {
-    // Wallet connection is handled by wagmi, this is just for triggering the modal
-    // The actual connection happens via the Web3Provider
+    if (typeof window === "undefined") return;
     setIsConnecting(true);
 
     try {
@@ -243,33 +240,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           setIsConnected(true);
           setChainId(nextChainId);
           localStorage.setItem(WALLET_KEY, JSON.stringify({ address: nextAddress, chainId: nextChainId }));
-
-          ethereum.on("accountsChanged", (accs: string[]) => {
-            if (accs.length === 0) {
-              setAddress(undefined);
-              setIsConnected(false);
-              setChainId(undefined);
-              resetWalletScopedState();
-              localStorage.removeItem(WALLET_KEY);
-            } else {
-              const updatedAddress = accs[0] as `0x${string}`;
-              setAddress(updatedAddress);
-              setIsConnected(true);
-              localStorage.setItem(
-                WALLET_KEY,
-                JSON.stringify({ address: updatedAddress, chainId: nextChainId })
-              );
-            }
-          });
-
-          ethereum.on("chainChanged", (hex: string) => {
-            const updatedChainId = parseInt(hex, 16);
-            setChainId(updatedChainId);
-            localStorage.setItem(
-              WALLET_KEY,
-              JSON.stringify({ address: nextAddress, chainId: updatedChainId })
-            );
-          });
         }
       } else {
         const mockAddr = `0x${Array.from({ length: 40 }, () => Math.floor(Math.random() * 16).toString(16)).join("")}` as `0x${string}`;
@@ -287,8 +257,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   const disconnect = () => {
-    wagmiDisconnect();
     setAddress(undefined);
+    setIsConnected(false);
     setChainId(undefined);
     resetWalletScopedState();
     if (typeof window !== "undefined") {

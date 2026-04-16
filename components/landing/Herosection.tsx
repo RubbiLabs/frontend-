@@ -30,9 +30,9 @@ export default function HeroSection() {
       {/* Background blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-0 right-0 w-[700px] h-[700px] rounded-full bg-primary/5 blur-3xl translate-x-1/3 -translate-y-1/4" />
-        <div className="absolute bottom-0 left-0 w-[450px] h-[450px] rounded-full bg-tertiary/6 blur-3xl -translate-x-1/4 translate-y-1/4" />
+        <div className="absolute bottom-0 left-0 w-[450px] h-[450px] rounded-full bg-[#8dbcd794] blur-3xl -translate-x-1/4 translate-y-1/4" />
         <div className="absolute top-1/2 left-1/2 w-[300px] h-[300px] rounded-full bg-secondary/4 blur-3xl -translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute top-24 left-[8%] w-24 h-24 rounded-full border border-primary/10 animate-driftSideways" />
+        <div className="absolute top-24 left-[8%] w-24 h-24 rounded-full bg-[#70b4dc25] border border-primary/10 animate-driftSideways" />
         <div className="absolute bottom-24 right-[12%] w-40 h-40 rounded-full border border-tertiary/10 animate-floatReverse" />
       </div>
 
@@ -96,7 +96,7 @@ export default function HeroSection() {
                     <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-white/55">Virtual Card</p>
                     <CreditCard size={18} className="text-white/70" />
                   </div>
-                  <div className="w-11 h-7 rounded-lg bg-[#EBCB7B] mb-7" />
+                  <div className="w-8 h-8 rounded-lg bg-[#EBCB7B] mb-7" />
                   <p className="font-mono tracking-[0.28em] text-sm mb-7">5234 1988 2400 6721</p>
                   <div className="flex items-end justify-between gap-4">
                     <div>
@@ -144,7 +144,7 @@ export default function HeroSection() {
               </div>
             </div>
 
-            <div className="absolute -left-10 top-28 rounded-2xl bg-white border border-neutral-200 px-4 py-3 shadow-lg animate-floatReverse">
+            <div className="absolute -left-10 top-[280px] rounded-2xl bg-white border border-neutral-200 px-4 py-3 shadow-lg animate-floatReverse">
               <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-neutral-400 mb-1">Subscription</p>
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-red-500 flex items-center justify-center text-white font-bold">N</div>
@@ -155,7 +155,7 @@ export default function HeroSection() {
               </div>
             </div>
 
-            <div className="absolute -right-8 bottom-12 rounded-2xl bg-primary text-white px-4 py-3 shadow-lg animate-floatSlow">
+            <div className="absolute left-40 bottom-14 rounded-2xl bg-primary text-white px-4 py-3 shadow-lg animate-floatSlow">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-white/12 flex items-center justify-center">
                   <ArrowUpRight size={16} />
