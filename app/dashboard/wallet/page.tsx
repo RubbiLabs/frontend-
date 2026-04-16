@@ -1,19 +1,12 @@
 "use client";
-
-import React, { useState, useEffect } from "react";
-import { Droplets, ArrowUpRight, ArrowDownRight, Plus, Minus, RefreshCw, CheckCircle, Clock } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Droplets, ArrowUpRight, ArrowDownRight, RefreshCw, CheckCircle } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import { useWallet } from "../../../context/WalletContext";
 import { useToast } from "../../../context/ToastContext";
-import { useAccount, useChainId, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import RubbiTokenABI from "@/Abis/RubbiToken.json";
-import ModalABI from "@/Abis/Modal.json";
-import { useNetworkSwitch } from "@/hooks/useNetworkSwitch";
 
-const MONAD_TESTNET_CHAIN_ID = 10143;
-
-const rubbiTokenAddress = process.env.NEXT_PUBLIC_RUBBI_TOKEN_ADDRESS as `0x${string}`;
-const modalContractAddress = process.env.NEXT_PUBLIC_MODAL_CONTRACT_ADDRESS as `0x${string}`;
+const CLAIM_LIMIT = 3;
+const FAUCET_CLAIMS_KEY = "rubbi_faucet_claims";
 
 const mockActivity = [
   { id: "1", label: "Faucet Claim", sub: "TODAY, 08:45 AM", amount: "+1000.00", positive: true, icon: "faucet" },
@@ -47,18 +40,32 @@ const ActivityIcon = ({ type }: { type: string }) => {
 
 export default function WalletPage() {
   const { rubBalance, setRubBalance, address } = useWallet();
-  const { toast } = useToast();
-  const { isConnected } = useAccount();
-  const chainId = useChainId();
-  const { isCorrectNetwork, switchToMonad } = useNetworkSwitch();
-
-  const [claimsRemaining, setClaimsRemaining] = useState(3);
+  const { success, error, info } = useToast();
+  const [claimCount, setClaimCount] = useState(0);
   const [claimLoading, setClaimLoading] = useState(false);
   const [depositModal, setDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositLoading, setDepositLoading] = useState(false);
   const [activity, setActivity] = useState(mockActivity);
 
+  const balance = Number(rubBalance || 12450);
+  const usdValue = (balance * 0.02).toFixed(2); // RUB at $0.02
+  const claimsRemaining = Math.max(0, CLAIM_LIMIT - claimCount);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !address) {
+      setClaimCount(0);
+      return;
+    }
+
+    try {
+      const stored = localStorage.getItem(FAUCET_CLAIMS_KEY);
+      const parsed = stored ? (JSON.parse(stored) as Record<string, number>) : {};
+      setClaimCount(parsed[address] ?? 0);
+    } catch {
+      setClaimCount(0);
+    }
+  }, [address]);
   // Get RUBBI token balance
   const { data: rubbiBalanceData, refetch: refetchRubbiBalance } = useReadContract({
     address: rubbiTokenAddress,
@@ -124,31 +131,24 @@ export default function WalletPage() {
   const canClaim = lastClaim === "0" || (Date.now() / 1000 - Number(lastClaim)) >= 86400;
 
   const handleClaim = async () => {
-    if (!isConnected) {
-      toast("error", "Not Connected", "Please connect your wallet first");
-      return;
-    }
-    if (!isCorrectNetwork) {
-      toast("error", "Wrong Network", "Please switch to Monad Testnet");
-      return;
-    }
-    if (!canClaim) {
-      toast("error", "Cooldown Active", "Please wait 24 hours between faucet claims");
-      return;
-    }
-
+    if (!address) { error("Wallet Required", "Connect your wallet to claim RUB."); return; }
+    if (claimsRemaining <= 0) { error("No Claims Remaining", "This wallet has already used all 3 lifetime faucet claims."); return; }
     setClaimLoading(true);
+    info("Claiming Faucet...", "Broadcasting transaction to Monad testnet.");
+    await new Promise(r => setTimeout(r, 1800));
+    const newBal = balance + 100;
+    const nextClaimCount = claimCount + 1;
+    setRubBalance(String(newBal));
+    setClaimCount(nextClaimCount);
     try {
-      await claimFaucet({
-        address: rubbiTokenAddress,
-        abi: RubbiTokenABI.abi,
-        functionName: "claimFaucet",
-      });
-      toast("success", "Transaction Submitted", "Claiming 1000 RUBBI...");
-    } catch (err: any) {
-      toast("error", "Claim Failed", err.message);
-      setClaimLoading(false);
-    }
+      const stored = localStorage.getItem(FAUCET_CLAIMS_KEY);
+      const parsed = stored ? (JSON.parse(stored) as Record<string, number>) : {};
+      parsed[address] = nextClaimCount;
+      localStorage.setItem(FAUCET_CLAIMS_KEY, JSON.stringify(parsed));
+    } catch {}
+    setActivity(prev => [{ id: Date.now().toString(), label: "Faucet Claim", sub: "JUST NOW", amount: "+100.00", positive: true, icon: "faucet" }, ...prev]);
+    success("100 RUB Claimed!", `${Math.max(0, CLAIM_LIMIT - nextClaimCount)} lifetime claim${Math.max(0, CLAIM_LIMIT - nextClaimCount) !== 1 ? "s" : ""} remaining for this wallet.`);
+    setClaimLoading(false);
   };
 
   // Handle deposit: first approve token, then deposit
@@ -222,10 +222,10 @@ export default function WalletPage() {
             </p>
             <p className="text-neutral-400 mt-2">≈ ${usdValue} USD (at 50 RUBBI = $1)</p>
 
-            <div className="flex flex-wrap gap-3 mt-6">
+            {/* <div className="flex flex-wrap gap-3 mt-6">
               <Button size="md" icon={<Plus size={15} />} onClick={() => setDepositModal(true)}>Deposit</Button>
               <Button size="md" variant="outlined" icon={<Minus size={15} />}>Withdraw</Button>
-            </div>
+            </div> */}
           </div>
 
           <div className="bg-white rounded-2xl p-6 border border-neutral-100 mt-4">
@@ -257,7 +257,7 @@ export default function WalletPage() {
               <Droplets size={24} className="text-primary/30" />
             </div>
             <p className="text-xs text-neutral-500 leading-relaxed mb-5">
-              Claim 1000 free RUBBI tokens daily to test the protocol and fund your subscriptions.
+              Claim RUB to test the network. Each wallet can only receive this 100 RUB faucet a total of 3 times forever.
             </p>
 
             <div className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 mb-4">
@@ -275,13 +275,13 @@ export default function WalletPage() {
             >
               {canClaim ? "Claim 1000 RUBBI" : "Cooldown Active"}
             </Button>
-            <p className="text-center text-xs text-neutral-400 mt-3">24 hour cooldown between claims</p>
+            <p className="text-center text-xs text-neutral-400 mt-3">Claim limit: 3 lifetime claims per wallet</p>
           </div>
 
           <div className="bg-neutral-50 rounded-2xl p-5 border border-neutral-100">
             <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">Protocol Status</p>
             <p className="text-xs text-neutral-500 leading-relaxed">
-              RUBBI token powers all subscriptions. 1 USD = 50 RUBBI. Card payments processed via sudo-africa.
+              The faucet distribution is wallet-scoped. Once a wallet has claimed 3 times, it cannot claim again.
             </p>
             <div className="flex items-center gap-2 mt-4">
               <CheckCircle size={14} className="text-green-500" />

@@ -1,27 +1,10 @@
 "use client";
-import React, { useState } from "react";
-import Link from "next/link";
+import React from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, LogOut, Wallet, Wifi, WifiOff, X } from "lucide-react";
+import { Menu, LogOut, Wallet } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
 import { navItems } from "@/components/layout/DashboardSidebar";
-import BridgeAssetsModal from "@/components/dashboard/BridgeAssetsModal";
-
-function NetworkBadge({ chainId }: { chainId: number | undefined }) {
-  const isMonad = chainId === 10143 || chainId === 41454;
-  return (
-    <div
-      className={`
-        flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-full uppercase tracking-wider
-        ${isMonad ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}
-      `}
-    >
-      {isMonad ? <Wifi size={10} /> : <WifiOff size={10} />}
-      {isMonad ? "Monad Testnet" : chainId ? `Chain ${chainId}` : "Not Connected"}
-    </div>
-  );
-}
 
 interface DashboardNavbarProps {
   onMenuClick: () => void;
@@ -30,9 +13,8 @@ interface DashboardNavbarProps {
 export default function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { disconnect, address, chainId } = useWallet();
+  const { disconnect, address } = useWallet();
   const { info } = useToast();
-  const [bridgeOpen, setBridgeOpen] = useState(false);
 
   const handleDisconnect = () => {
     disconnect();
@@ -74,15 +56,15 @@ export default function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
 
           {/* Desktop: brand name + current page */}
           <div className="hidden lg:flex items-center gap-2">
-            <span className="font-bold text-primary text-base">Rubbi</span>
-            <span className="text-neutral-300">|</span>
+            {/* <span className="font-bold text-primary text-base">Rubbi</span>
+            <span className="text-neutral-300">|</span> */}
             <span className="text-sm text-neutral-500 font-medium">{activeLabel}</span>
           </div>
         </div>
 
         {/* Right: network badge + wallet address + disconnect */}
         <div className="flex items-center gap-2.5">
-          <NetworkBadge chainId={chainId} />
+          {/* <NetworkBadge chainId={chainId} /> */}
 
           {/* Wallet address pill */}
           <div className="hidden sm:flex items-center gap-2 bg-white border border-neutral-200 rounded-xl px-3 py-2">
@@ -104,8 +86,6 @@ export default function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
           </button>
         </div>
       </header>
-
-      <BridgeAssetsModal open={bridgeOpen} onClose={() => setBridgeOpen(false)} />
     </>
   );
 }

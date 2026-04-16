@@ -1,8 +1,10 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import LandingNavbar from "../../components/layout/LandingNavbar";
 import LandingFooter from "../../components/layout/LandingFooter";
 import { Shield, Zap, BookOpen } from "lucide-react";
+import { useWallet } from "../../context/WalletContext";
 
 function FadeIn({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -20,6 +22,16 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 }
 
 export default function AboutPage() {
+  const router = useRouter();
+  const { isConnected, isHydrated } = useWallet();
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (isConnected) router.replace("/dashboard");
+  }, [isConnected, isHydrated, router]);
+
+  if (!isHydrated || isConnected) return null;
+
   return (
     <div className="min-h-screen bg-neutral-50 font-manrope overflow-x-hidden">
       <LandingNavbar />

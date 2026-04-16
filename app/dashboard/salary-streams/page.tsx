@@ -9,7 +9,7 @@ import { useSalaryStreaming, StreamDetails } from "@/hooks/useSalaryStreaming";
 import { useNetworkSwitch } from "@/hooks/useNetworkSwitch";
 import { useAccount } from "wagmi";
 
-type Interval = "Monthly" | "Bi-Weekly" | "Daily";
+type Interval = "Monthly" | "Weekly" | "Daily";
 type StreamStatus = "active" | "paused";
 
 interface Stream {
@@ -23,10 +23,16 @@ interface Stream {
   avatar: string;
 }
 
+const mockStreams: Stream[] = [
+  { id: "1", name: "Alex Rivera", address: "0x4a...e89", interval: "Monthly", amountPerCycle: 4500, streamed: 1245.42, status: "active", avatar: "AR" },
+  { id: "2", name: "Jordan Dax", address: "0x91...2c4", interval: "Weekly", amountPerCycle: 2800, streamed: 840.15, status: "active", avatar: "JD" },
+  { id: "3", name: "Casey Chen", address: "0xf3...8b1", interval: "Monthly", amountPerCycle: 5000, streamed: 0, status: "paused", avatar: "CC" },
+];
+
 const avatarColors = ["bg-tertiary", "bg-secondary", "bg-neutral-500"];
 const intervalOptions = [
   { value: "Monthly", label: "Monthly" },
-  { value: "Bi-Weekly", label: "Bi-Weekly" },
+  { value: "Weekly", label: "Weekly" },
   { value: "Daily", label: "Daily" },
 ];
 
@@ -181,7 +187,7 @@ export default function SalaryStreamsPage() {
         </div>
         <div className="text-right">
           <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Total Streaming</p>
-          <p className="text-2xl font-extrabold text-primary">{totalStreaming.toLocaleString()}.00 <span className="text-lg text-neutral-400">USDC</span></p>
+          <p className="text-2xl font-extrabold text-primary">{totalStreaming.toLocaleString()}.00 <span className="text-lg text-neutral-400">RUB</span></p>
         </div>
       </div>
 
@@ -236,7 +242,7 @@ export default function SalaryStreamsPage() {
                       onChange={(e) => setAmount(e.target.value)}
                       className="w-full px-4 py-3 pr-16 bg-neutral-50 border-2 border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400">USDC</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400">RUB</span>
                   </div>
                 </div>
                 <div>
@@ -274,58 +280,52 @@ export default function SalaryStreamsPage() {
           </div>
 
           <div className="space-y-3">
-            {displayStreams.length === 0 ? (
-              <div className="bg-neutral-50 rounded-2xl p-12 text-center border border-neutral-100">
-                <p className="text-neutral-500 mb-4">No active salary streams yet</p>
-                <p className="text-sm text-neutral-400">Create a stream to start automated payroll</p>
-              </div>
-            ) : (
-              displayStreams.map((stream, i) => (
-                <div key={stream.id} className="bg-white rounded-2xl p-5 border border-neutral-100 flex items-center gap-4">
-                  <div className={`w-11 h-11 ${avatarColors[i % avatarColors.length]} rounded-xl flex items-center justify-center shrink-0`}>
-                    <span className="text-white text-sm font-bold">{stream.avatar}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className="font-bold text-neutral-800 text-sm">{stream.name}</p>
-                      <span className="text-xs text-neutral-400 font-mono">{formatAddress(stream.address)}</span>
-                      <span className={`w-2 h-2 rounded-full ${stream.status === "active" ? "bg-green-400" : "bg-amber-400"}`} />
-                      {stream.status === "paused" && <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">PAUSED</span>}
-                    </div>
-                    <div className="flex items-center gap-1 text-xs text-neutral-400">
-                      <Clock size={11} />
-                      <span>{stream.interval}</span>
-                      <span>·</span>
-                      <span>{stream.amountPerCycle.toLocaleString()} USDC / Cycle</span>
-                    </div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Streaming</p>
-                    <p className="text-base font-extrabold text-primary">{stream.streamed.toFixed(2)}</p>
-                  </div>
-                  <button
-                    onClick={() => handlePauseResume(stream)}
-                    disabled={loadingId === stream.id || !isConnected || !isCorrectNetwork}
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${
-                      stream.status === "active"
-                        ? "border-neutral-200 text-neutral-400 hover:border-primary hover:text-primary"
-                        : "border-primary/20 text-primary bg-primary/5 hover:bg-primary hover:text-white"
-                    } disabled:opacity-50`}
-                  >
-                    {loadingId === stream.id ? (
-                      <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                    ) : stream.status === "active" ? (
-                      <Pause size={14} />
-                    ) : (
-                      <Play size={14} />
-                    )}
-                  </button>
+            {streams.map((stream, i) => (
+              <div key={stream.id} className="bg-white rounded-2xl p-5 border border-neutral-100 flex items-center gap-4">
+                <div className={`w-11 h-11 ${avatarColors[i % avatarColors.length]} rounded-xl flex items-center justify-center shrink-0`}>
+                  <span className="text-white text-sm font-bold">{stream.avatar}</span>
                 </div>
-              ))
-            )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="font-bold text-neutral-800 text-sm">{stream.name}</p>
+                    <span className="text-xs text-neutral-400 font-mono">{stream.address}</span>
+                    <span className={`w-2 h-2 rounded-full ${stream.status === "active" ? "bg-green-400" : "bg-amber-400"}`} />
+                    {stream.status === "paused" && <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">PAUSED</span>}
+                  </div>
+                  <div className="flex items-center gap-1 text-xs text-neutral-400">
+                    <Clock size={11} />
+                    <span>{stream.interval}</span>
+                    <span>·</span>
+                    <span>{stream.amountPerCycle.toLocaleString()}  RUB / Cycle</span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Streaming</p>
+                  <p className="text-base font-extrabold text-primary">{stream.streamed.toFixed(2)}</p>
+                </div>
+                <button
+                  onClick={() => handlePauseResume(stream)}
+                  disabled={loadingId === stream.id}
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${
+                    stream.status === "active"
+                      ? "border-neutral-200 text-neutral-400 hover:border-primary hover:text-primary"
+                      : "border-primary/20 text-primary bg-primary/5 hover:bg-primary hover:text-white"
+                  }`}
+                >
+                  {loadingId === stream.id ? (
+                    <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                  ) : stream.status === "active" ? (
+                    <Pause size={14} />
+                  ) : (
+                    <Play size={14} />
+                  )}
+                </button>
+              </div>
+            ))}
           </div>
 
-          <div className="bg-primary rounded-2xl p-6 text-white relative overflow-hidden">
+          {/* Monad Stream Consensus */}
+          {/* <div className="bg-primary rounded-2xl p-6 text-white relative overflow-hidden">
             <div className="absolute inset-0 pointer-events-none">
               <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full bg-white/5 translate-x-1/3 translate-y-1/3" />
             </div>
@@ -351,7 +351,7 @@ export default function SalaryStreamsPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
 

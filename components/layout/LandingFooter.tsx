@@ -2,12 +2,11 @@
 import React from "react";
 import Link from "next/link";
 import { useWallet } from "@/context/WalletContext";
-import { useRouter } from "next/navigation";
 
 export default function LandingFooter() {
   const year = new Date().getFullYear();
   const { isConnected } = useWallet();
-  const router = useRouter();
+  const logoHref = isConnected ? "/dashboard" : "/";
 
   const protocol = [
     { label: "Dashboard", href: "/dashboard" },
@@ -29,7 +28,7 @@ export default function LandingFooter() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2.5 mb-4">
+            <Link href={logoHref} className="flex items-center gap-2.5 mb-4">
               <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
                 <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
                   <path d="M12 8H26C31.523 8 36 12.477 36 18C36 22.072 33.572 25.572 30.08 27.2L36 40H28L22.8 28H20V40H12V8Z" fill="#F7F7F2"/>

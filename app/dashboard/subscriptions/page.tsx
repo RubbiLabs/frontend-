@@ -1,7 +1,6 @@
 "use client";
-
-import React, { useState } from "react";
-import { Pause, Play, X, Plus } from "lucide-react";
+import React, { useRef, useState } from "react";
+import { Pause, Play, X } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import VirtualCardModal from "../../../components/dashboard/VirtualCardModal";
 import { useWallet } from "../../../context/WalletContext";
@@ -55,7 +54,7 @@ const colorMap: Record<string, string> = {
 type CategoryFilter = "all" | "entertainment" | "cloud" | "finance";
 
 export default function SubscriptionsPage() {
-  const { hasVirtualCard } = useWallet();
+  const { hasVirtualCard, virtualCardData } = useWallet();
   const { showToast } = useToast();
   const { isConnected, address } = useAccount();
   const { isCorrectNetwork, switchToMonad } = useNetworkSwitch();
@@ -75,21 +74,15 @@ export default function SubscriptionsPage() {
   const [pendingSubscribe, setPendingSubscribe] = useState<CatalogItem | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
-  const [showDepositModal, setShowDepositModal] = useState(false);
-  const [depositAmount, setDepositAmount] = useState("");
+  const activeSubscriptionsRef = useRef<HTMLDivElement>(null);
 
-  const userSubsList: Subscription[] = userSubscriptions.map((sub: any, idx: number) => ({
-    id: idx.toString(),
-    name: sub.name,
-    fee: Number(sub.fee) / 1e18,
-    nextPayment: "Next month",
-    streamId: `#RB-${7000 + idx}-00${idx + 1}`,
-    uptime: "0 Days",
-    status: sub.active ? "active" : "paused",
-    color: colorMap[sub.name] || "bg-primary",
-  }));
+  const totalMonthly = subs.filter(s => s.status === "active").reduce((acc, s) => acc + s.fee, 0);
 
-  const totalMonthly = userSubsList.filter(s => s.status === "active").reduce((acc, s) => acc + s.fee, 0);
+  const focusActiveSubscriptions = () => {
+    window.setTimeout(() => {
+      activeSubscriptionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+  };
 
   const handlePauseResume = async (sub: Subscription) => {
     if (!isConnected) {
@@ -137,39 +130,24 @@ export default function SubscriptionsPage() {
     doSubscribe(item);
   };
 
-  const doSubscribe = async (item: CatalogItem) => {
-    const planIndex = subscriptionPlans.findIndex((p: any) => p.name === item.name);
-    if (planIndex === -1) {
-      showToast("error", "Plan Not Found", "This subscription plan doesn't exist on-chain yet");
-      return;
-    }
-
-    try {
-      await startSubscription(planIndex, `${address}@rubbi.finance`, "default_password");
-      showToast("success", "Subscribed!", `You're now subscribed to ${item.name}.`);
-    } catch (err: any) {
-      showToast("error", "Subscription Failed", err.message);
-    }
+  const doSubscribe = (item: CatalogItem) => {
+    const alreadySubscribed = subs.some(s => s.name === item.name);
+    if (alreadySubscribed) { error("Already Subscribed", `You're already subscribed to ${item.name}.`); return; }
+    const newSub: Subscription = {
+      id: Date.now().toString(), name: item.name, fee: item.fee,
+      nextPayment: "Next month", streamId: `#RB-${Math.floor(7000 + Math.random() * 1000)}-00${subs.length + 1}`,
+      uptime: "0 Days", status: "active", color: item.color,
+    };
+    setSubs(prev => [...prev, newSub]);
+    success("Subscribed!", `You're now subscribed to ${item.name}.`);
+    focusActiveSubscriptions();
   };
 
   const onCardComplete = () => {
-    if (pendingSubscribe) { 
-      doSubscribe(pendingSubscribe); 
-      setPendingSubscribe(null); 
+    if (pendingSubscribe) {
+      doSubscribe(pendingSubscribe);
+      setPendingSubscribe(null);
     }
-  };
-
-  const handleDeposit = async () => {
-    const amount = parseFloat(depositAmount);
-    if (isNaN(amount) || amount <= 0) {
-      showToast("error", "Invalid Amount", "Please enter a valid amount");
-      return;
-    }
-    const amountInWei = BigInt(Math.floor(amount * 1e18));
-    await depositFunds(amountInWei);
-    setShowDepositModal(false);
-    setDepositAmount("");
-    showToast("success", "Deposit Submitted", `Depositing ${amount} USDC`);
   };
 
   const filteredCatalog = categoryFilter === "all" ? catalog : catalog.filter(c => c.category === categoryFilter);
@@ -186,35 +164,50 @@ export default function SubscriptionsPage() {
           <h1 className="text-2xl lg:text-3xl font-extrabold text-neutral-900">Subscriptions</h1>
           <p className="text-sm text-neutral-500 mt-1">Automating {userSubsList.length} recurring agreement{userSubsList.length !== 1 ? "s" : ""}</p>
         </div>
-        {isConnected && (
-          <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-xl border border-neutral-200">
-            <div>
-              <p className="text-xs text-neutral-400">Wallet Balance</p>
-              <p className="text-lg font-bold text-neutral-900">{formatBalance(balance)} USDC</p>
-            </div>
-            <Button size="sm" variant="outlined" onClick={() => setShowDepositModal(true)}>
-              Deposit
-            </Button>
+        {/* <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-neutral-200 border-2 border-white" />
+            <div className="w-8 h-8 rounded-full bg-primary/30 border-2 border-white -ml-3" />
+            <div className="w-8 h-8 rounded-full bg-tertiary/30 border-2 border-white -ml-3" />
           </div>
-        )}
+          <Button size="sm" variant="outlined">
+            <span className="uppercase tracking-wider text-xs">Connect Wallet</span>
+          </Button>
+        </div> */}
       </div>
 
-      {!isCorrectNetwork && isConnected && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-              <span className="text-yellow-600">⚠️</span>
-            </div>
+      {hasVirtualCard && virtualCardData && (
+        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <p className="font-semibold text-yellow-800">Wrong Network</p>
-              <p className="text-sm text-yellow-600">Please switch to Monad Testnet to manage subscriptions</p>
+              <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-2">Saved Subscription Card</p>
+              <h2 className="text-lg font-bold text-neutral-900">Ready for instant checkout</h2>
+              <p className="text-sm text-neutral-500 mt-1">This wallet already has a Rubbi card, so new subscriptions can start immediately.</p>
+            </div>
+            <div className="bg-primary rounded-2xl p-5 min-w-[280px] card-shine">
+              <p className="text-xs text-white/50 uppercase tracking-widest mb-3">Rubbi Virtual Card</p>
+              <p className="font-mono text-white tracking-widest mb-4">{virtualCardData.cardNumber}</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <p className="text-xs text-white/40">HOLDER</p>
+                  <p className="text-sm font-bold text-white">{virtualCardData.cardHolder}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-white/40">EXP</p>
+                  <p className="text-sm font-bold text-white">{virtualCardData.expiry}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-white/40">CVV</p>
+                  <p className="text-sm font-bold text-white">{virtualCardData.cvv}</p>
+                </div>
+              </div>
             </div>
           </div>
-          <Button size="sm" onClick={switchToMonad}>Switch to Monad</Button>
         </div>
       )}
 
-      <div>
+      {/* Active Subscriptions */}
+      <div ref={activeSubscriptionsRef}>
         <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-4">Active Subscriptions</h2>
 
         {userSubsList.length === 0 ? (
@@ -259,51 +252,51 @@ export default function SubscriptionsPage() {
               </div>
             )}
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {userSubsList.slice(1).map((sub) => (
-                <div key={sub.id} className="bg-white rounded-2xl p-5 border border-neutral-100 hover:shadow-card transition-all">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`w-11 h-11 ${sub.color} rounded-xl flex items-center justify-center`}>
-                      <span className="text-white font-bold">{sub.name.charAt(0)}</span>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-extrabold text-neutral-900">{sub.fee.toFixed(2)}</p>
-                      <p className="text-xs font-semibold text-neutral-400">USDC</p>
-                    </div>
-                  </div>
-                  <h3 className="font-bold text-neutral-800 mb-1">{sub.name}</h3>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${statusBadge[sub.status]}`}>
-                      {sub.status === "paused" ? "ON HOLD" : "ACTIVE"}
-                    </span>
-                  </div>
-                  <div className="flex gap-2">
-                    {sub.status === "paused" ? (
-                      <Button size="sm" fullWidth loading={loadingId === sub.id} onClick={() => handlePauseResume(sub)} icon={<Play size={13} />}>
-                        Resume
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="outlined" fullWidth loading={loadingId === sub.id} onClick={() => handlePauseResume(sub)} icon={<Pause size={13} />}>
-                        Pause
-                      </Button>
-                    )}
-                  </div>
+        {/* Remaining subs grid */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {subs.slice(1).map((sub) => (
+            <div key={sub.id} className="bg-white rounded-2xl p-5 border border-neutral-100 hover:shadow-card transition-all">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`w-11 h-11 ${sub.color} rounded-xl flex items-center justify-center`}>
+                  <span className="text-white font-bold">{sub.name.charAt(0)}</span>
                 </div>
-              ))}
+                <div className="text-right">
+                  <p className="text-lg font-extrabold text-neutral-900">{sub.fee.toFixed(2)}</p>
+                  <p className="text-xs font-semibold text-neutral-400">RUB</p>
+                </div>
+              </div>
+              <h3 className="font-bold text-neutral-800 mb-1">{sub.name}</h3>
+              <div className="flex items-center justify-between mb-4">
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${statusBadge[sub.status]}`}>
+                  {sub.status === "paused" ? "ON HOLD" : "ACTIVE"}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                {sub.status === "paused" ? (
+                  <Button size="sm" fullWidth loading={loadingId === sub.id} onClick={() => handlePauseResume(sub)} icon={<Play size={13} />}>
+                    Resume
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="outlined" fullWidth loading={loadingId === sub.id} onClick={() => handlePauseResume(sub)} icon={<Pause size={13} />}>
+                    Pause
+                  </Button>
+                )}
+                {/* <button className="p-2 border border-neutral-200 rounded-lg hover:bg-neutral-50 transition-colors"><Settings size={14} className="text-neutral-400" /></button> */}
+              </div>
             </div>
-          </>
-        )}
+          ))}
+        </div>
       </div>
 
       <div className="bg-primary rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-white/60">Total Outflow (Monthly)</p>
-          <p className="text-3xl font-extrabold text-white mt-1">{totalMonthly.toFixed(2)} <span className="text-lg font-bold text-white/60">USDC</span></p>
-          <p className="text-xs text-white/50 mt-1">{userSubsList.filter(s => s.status === "active").length} active streams</p>
+          <p className="text-3xl font-extrabold text-white mt-1">{totalMonthly.toFixed(2)} <span className="text-lg font-bold text-white/60">RUB</span></p>
+          <p className="text-xs text-white/50 mt-1">{subs.filter(s => s.status === "active").length} active streams</p>
         </div>
         <div className="bg-white/10 rounded-xl p-4">
           <p className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-1">Gas Optimization</p>
-          <p className="text-sm text-white/80">Batching {userSubsList.length} subscriptions saved 4.2 USDC this month.</p>
+          <p className="text-sm text-white/80">Batching {subs.length} subscriptions saved 4.2 RUB this month.</p>
         </div>
       </div>
 
@@ -333,7 +326,7 @@ export default function SubscriptionsPage() {
                   <span className="text-white font-bold">{item.name.charAt(0)}</span>
                 </div>
                 <p className="font-bold text-neutral-800 text-sm mb-1">{item.name}</p>
-                <p className="text-xs text-neutral-400 mb-4">{item.fee.toFixed(2)} USDC / {item.period}</p>
+                <p className="text-xs text-neutral-400 mb-4">{item.fee.toFixed(2)} RUB / {item.period}</p>
                 <Button
                   size="sm"
                   fullWidth
@@ -350,27 +343,14 @@ export default function SubscriptionsPage() {
         </div>
       </div>
 
-      <VirtualCardModal open={cardModalOpen} onClose={() => setCardModalOpen(false)} onComplete={onCardComplete} />
-
-      {showDepositModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-            <h3 className="text-xl font-bold mb-4">Deposit Funds</h3>
-            <p className="text-sm text-neutral-500 mb-4">Current Balance: {formatBalance(balance)} USDC</p>
-            <input
-              type="number"
-              placeholder="Amount in USDC"
-              value={depositAmount}
-              onChange={(e) => setDepositAmount(e.target.value)}
-              className="w-full px-4 py-3 border border-neutral-200 rounded-xl mb-4"
-            />
-            <div className="flex gap-2">
-              <Button variant="outlined" fullWidth onClick={() => setShowDepositModal(false)}>Cancel</Button>
-              <Button fullWidth onClick={handleDeposit}>Deposit</Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <VirtualCardModal
+        open={cardModalOpen}
+        onClose={() => {
+          setCardModalOpen(false);
+          setPendingSubscribe(null);
+        }}
+        onComplete={onCardComplete}
+      />
     </div>
   );
 }

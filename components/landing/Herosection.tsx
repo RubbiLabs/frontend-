@@ -13,9 +13,13 @@ export default function HeroSection() {
 
   const handleConnect = async () => {
     try {
+      if (isConnected) {
+        router.push("/dashboard");
+        return;
+      }
       await connect();
-      success("Wallet Connected!", "Redirecting to onboarding...");
-      router.push("/onboarding");
+      success("Wallet Connected!", "Redirecting to dashboard...");
+      router.push("/dashboard");
     } catch {
       error("Connection Failed", "Please try again or install MetaMask.");
     }

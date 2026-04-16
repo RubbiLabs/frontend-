@@ -28,8 +28,8 @@ export default function DashboardSidebar({ onBridgeClick }: DashboardSidebarProp
     <aside className="hidden lg:flex flex-col w-60 bg-neutral-50 border-r border-neutral-200 shrink-0 h-full">
       {/* Brand */}
       <div className="p-5 border-b border-neutral-100">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center shadow-sm">
+        <div className="flex items-center gap-0.5">
+          <div className="w-9 h-9 bg-primary rounded-l flex items-center justify-center shadow-sm">
             <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
               <path
                 d="M12 8H26C31.523 8 36 12.477 36 18C36 22.072 33.572 25.572 30.08 27.2L36 40H28L22.8 28H20V40H12V8Z"
@@ -41,12 +41,13 @@ export default function DashboardSidebar({ onBridgeClick }: DashboardSidebarProp
               />
               <circle cx="36" cy="38" r="3" fill="#8C7851" />
             </svg>
+            {/* <img src="" alt="Rubbi logo" /> */}
           </div>
           <div>
-            <p className="font-bold text-primary text-[15px] leading-tight">Rubbi Ledger</p>
-            <p className="text-[10px] text-neutral-400 font-semibold tracking-widest uppercase">
+            <p className="font-bold text-primary text-[15px] leading-tight">ubbi Ledger</p>
+            {/* <p className="text-[10px] text-neutral-400 font-semibold tracking-widest uppercase">
               Monad Network
-            </p>
+            </p> */}
           </div>
         </div>
       </div>

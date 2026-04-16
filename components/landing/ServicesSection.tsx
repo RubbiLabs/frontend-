@@ -78,9 +78,13 @@ export default function ServicesSection() {
 
   const handleConnect = async () => {
     try {
+      if (isConnected) {
+        router.push("/dashboard");
+        return;
+      }
       await connect();
       success("Wallet Connected!");
-      router.push("/onboarding");
+      router.push("/dashboard");
     } catch {
       error("Connection Failed", "Please try again.");
     }

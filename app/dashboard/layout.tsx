@@ -10,7 +10,7 @@ import BridgeAssetsModal from "../../components/dashboard/BridgeAssetsModal";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isConnected } = useWallet();
+  const { isConnected, isHydrated } = useWallet();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bridgeOpen, setBridgeOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -20,19 +20,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   useEffect(() => {
-    if (mounted && !isConnected) router.replace("/");
-  }, [mounted, isConnected, router]);
+    if (!isHydrated) return;
+    if (!isConnected) router.replace("/");
+  }, [isConnected, isHydrated, router]);
 
-  if (!mounted || !isConnected) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-100">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-neutral-500 text-sm">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  if (!isHydrated) return null;
+  if (!isConnected) return null;
 
   return (
     <div className="flex h-screen bg-neutral-100 overflow-hidden font-manrope">

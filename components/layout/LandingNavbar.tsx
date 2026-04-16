@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, Wallet } from "lucide-react";
-import { useAccount, useConnect } from "wagmi";
 import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
 import Button from "@/components/ui/Button";
@@ -13,10 +12,8 @@ export default function LandingNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { isConnected } = useAccount();
-  const { connectors, connect } = useConnect();
-  const { setOnboardingComplete } = useWallet();
-  const { toast } = useToast();
+  const { isConnected, connect, isConnecting } = useWallet();
+  const { success, error } = useToast();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -24,27 +21,28 @@ export default function LandingNavbar() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const handleConnect = () => {
-    const connector = connectors.find(c => c.type === "injected");
-    if (connector) {
-      connect({ connector });
-      // Check if user has completed onboarding before
-      const onboarded = localStorage.getItem("rubbi_onboarding_complete");
-      if (onboarded === "true") {
+  const handleConnect = async () => {
+    try {
+      if (isConnected) {
         router.push("/dashboard");
-      } else {
-        router.push("/onboarding");
+        return;
       }
-    } else {
-      toast("error", "No Wallet Found", "Please install a wallet like MetaMask.");
+      await connect();
+      success("Wallet Connected", "Welcome to Rubbi Protocol.");
+      router.push("/dashboard");
+    } catch {
+      error("Connection Failed", "Could not connect wallet. Please try again.");
     }
   };
 
-  const links = [
-    { href: "/", label: "Home" },
-    { href: "/about", label: "About" },
-    { href: "/services", label: "Services" },
-  ];
+  const logoHref = isConnected ? "/dashboard" : "/";
+  const links = isConnected
+    ? []
+    : [
+        { href: "/", label: "Home" },
+        { href: "/about", label: "About" },
+        { href: "/services", label: "Services" },
+      ];
 
   const isActive = (href: string) => pathname === href;
 
@@ -59,7 +57,7 @@ export default function LandingNavbar() {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 lg:h-18">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+          <Link href={logoHref} className="flex items-center gap-2.5 shrink-0">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
               <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
                 <path d="M12 8H26C31.523 8 36 12.477 36 18C36 22.072 33.572 25.572 30.08 27.2L36 40H28L22.8 28H20V40H12V8Z" fill="#F7F7F2"/>

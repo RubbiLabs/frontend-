@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Calendar, DollarSign, Shield, Wallet, ArrowRight } from "lucide-react";
 import LandingNavbar from "../../components/layout/LandingNavbar";
-import LandingFooter from "../../components/dashboard/ActivityChart"
+import LandingFooter from "../../components/layout/LandingFooter";
 import { useWallet } from "../../context/WalletContext";
 import { useToast } from "../../context/ToastContext";
 import Button from "../../components/ui/Button";
@@ -26,13 +26,20 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 
 export default function ServicesPage() {
   const router = useRouter();
-  const { isConnected, connect, isConnecting } = useWallet();
+  const { isConnected, isHydrated, connect, isConnecting } = useWallet();
   const { success, error } = useToast();
 
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (isConnected) router.replace("/dashboard");
+  }, [isConnected, isHydrated, router]);
+
   const handleConnect = async () => {
-    try { await connect(); success("Wallet Connected!"); router.push("/onboarding"); }
+    try { await connect(); success("Wallet Connected!"); router.push("/dashboard"); }
     catch { error("Connection Failed", "Please try again."); }
   };
+
+  if (!isHydrated || isConnected) return null;
 
   return (
     <div className="min-h-screen bg-neutral-50 font-manrope overflow-x-hidden">
