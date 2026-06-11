@@ -6,7 +6,7 @@ import Button from "@/components/ui/Button";
 import { useToast } from "@/context/ToastContext";
 import { BridgeToken, BridgeNetwork, TOKEN_USD_PRICES, RUB_PER_USD } from "@/types";
 
-const TOKENS: BridgeToken[] = ["USDC", "USDT", "DAI", "MON", "ETH"];
+const TOKENS: BridgeToken[] = ["USDC", "USDT", "DAI", "ARB", "ETH"];
 const NETWORKS: BridgeNetwork[] = ["ERC20", "BSC (BEP20)", "TRON20"];
 
 interface Props { open: boolean; onClose: () => void; }
@@ -24,7 +24,7 @@ export default function BridgeAssetsModal({ open, onClose }: Props) {
   const rubReceive = usdValue * RUB_PER_USD;
 
   const tokenColors: Record<BridgeToken, string> = {
-    USDC: "bg-blue-500", USDT: "bg-green-500", DAI: "bg-yellow-500", MON: "bg-purple-500", ETH: "bg-indigo-500",
+    USDC: "bg-blue-500", USDT: "bg-green-500", DAI: "bg-yellow-500", ARB: "bg-sky-500", ETH: "bg-indigo-500",
   };
 
   const networkColors: Record<BridgeNetwork, string> = {
@@ -144,7 +144,7 @@ export default function BridgeAssetsModal({ open, onClose }: Props) {
         <div className="flex items-start gap-2 p-3 bg-tertiary/5 rounded-xl">
           <Info size={14} className="text-tertiary shrink-0 mt-0.5" />
           <p className="text-xs text-neutral-500 leading-relaxed">
-            Bridge fee: <strong>0%</strong> during beta. Tokens are converted at the fixed rate of <strong>$1 = 50 RUB</strong>. Settlement time: ~30 seconds on Monad Testnet.
+            Bridge fee: <strong>0%</strong> during beta. Tokens are converted at the fixed rate of <strong>$1 = 50 RUB</strong>. Settlement time: ~30 seconds on Arbitrum Sepolia.
           </p>
         </div>
 

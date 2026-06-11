@@ -36,7 +36,7 @@ export default function HeroSection() {
         <div className="absolute bottom-24 right-[12%] w-40 h-40 rounded-full border border-tertiary/10 animate-floatReverse" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 lg:px-8 py-24 w-full grid lg:grid-cols-2 gap-16 items-center">
+      <div className="px-6 lg:px-36 py-24 w-full flex items-center justify-between">
         {/* ── Left copy ── */}
         <div>
           {/* Eyebrow */}
@@ -51,14 +51,12 @@ export default function HeroSection() {
           >
             Decentralized
             <br />
-            Financial
-            <br />
-            <span className="text-primary">Automation.</span>
+            Financial <span className="text-primary">Automation.</span>
           </h1>
 
           {/* Subheadline */}
-          <p className="text-base lg:text-lg text-neutral-500 leading-relaxed max-w-md mb-10">
-            A heavy-duty ledger protocol for the Monad Network. Secure
+          <p className="text-base lg:text-lg text-neutral-500 leading-relaxed max-w-2xl mb-10">
+            A heavy-duty ledger protocol for the Arbitrum Network. Secure
             your streams, automate your life, and archive your wealth with
             permanent precision.
           </p>

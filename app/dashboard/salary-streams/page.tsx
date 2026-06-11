@@ -39,7 +39,7 @@ const intervalOptions = [
 export default function SalaryStreamsPage() {
   const { toast } = useToast();
   const { isConnected } = useAccount();
-  const { isCorrectNetwork, switchToMonad } = useNetworkSwitch();
+  const { isCorrectNetwork, switchToArbitrum } = useNetworkSwitch();
   
   const {
     dailyStreams,
@@ -101,7 +101,7 @@ export default function SalaryStreamsPage() {
       return;
     }
     if (!isCorrectNetwork) {
-      toast("error", "Wrong Network", "Please switch to Monad Testnet");
+      toast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
 
@@ -135,7 +135,7 @@ export default function SalaryStreamsPage() {
       return;
     }
     if (!isCorrectNetwork) {
-      toast("error", "Wrong Network", "Please switch to Monad Testnet");
+      toast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
     if (!recipient.trim()) {
@@ -183,7 +183,7 @@ export default function SalaryStreamsPage() {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-extrabold text-neutral-900">Salary Streams</h1>
-          <p className="text-sm text-neutral-500 mt-1">Automate your payroll with block-by-block distribution on the Monad ledger.</p>
+          <p className="text-sm text-neutral-500 mt-1">Automate your payroll with block-by-block distribution on the Arbitrum ledger.</p>
         </div>
         <div className="text-right">
           <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Total Streaming</p>
@@ -199,10 +199,10 @@ export default function SalaryStreamsPage() {
             </div>
             <div>
               <p className="font-semibold text-yellow-800">Wrong Network</p>
-              <p className="text-sm text-yellow-600">Please switch to Monad Testnet to manage streams</p>
+              <p className="text-sm text-yellow-600">Please switch to Arbitrum Sepolia to manage streams</p>
             </div>
           </div>
-          <Button size="sm" onClick={switchToMonad}>Switch to Monad</Button>
+          <Button size="sm" onClick={switchToArbitrum}>Switch to Arbitrum</Button>
         </div>
       )}
 
@@ -324,7 +324,7 @@ export default function SalaryStreamsPage() {
             ))}
           </div>
 
-          {/* Monad Stream Consensus */}
+          {/* Arbitrum Stream Settlement */}
           {/* <div className="bg-primary rounded-2xl p-6 text-white relative overflow-hidden">
             <div className="absolute inset-0 pointer-events-none">
               <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full bg-white/5 translate-x-1/3 translate-y-1/3" />
@@ -333,7 +333,7 @@ export default function SalaryStreamsPage() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-white/50">Network Efficiency</p>
-                  <h3 className="text-lg font-extrabold mt-1">Monad Stream Consensus</h3>
+                  <h3 className="text-lg font-extrabold mt-1">Arbitrum Stream Settlement</h3>
                 </div>
                 <Zap size={24} className="text-white/20" />
               </div>

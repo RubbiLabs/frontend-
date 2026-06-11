@@ -4,7 +4,7 @@ import SalaryStreamingABI from "@/Abis/SalaryStreaming.json";
 import { useEffect } from "react";
 import { useToast } from "@/context/ToastContext";
 
-const MONAD_TESTNET_CHAIN_ID = 10143;
+const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 
 const salaryStreamingAddress = process.env.NEXT_PUBLIC_SALARY_STREAMING_ADDRESS as `0x${string}`;
 
@@ -29,7 +29,7 @@ export function useSalaryStreaming() {
   } = useBlockchainStore();
 
   useEffect(() => {
-    setIsCorrectNetwork(chainId === MONAD_TESTNET_CHAIN_ID);
+    setIsCorrectNetwork(chainId === ARBITRUM_SEPOLIA_CHAIN_ID);
   }, [chainId, setIsCorrectNetwork]);
 
   const { data: dailyData, isLoading: isLoadingDaily, refetch: refetchDaily } = useReadContract({
@@ -37,7 +37,7 @@ export function useSalaryStreaming() {
     abi: SalaryStreamingABI.abi,
     functionName: "getAllDailyStreams",
     query: {
-      enabled: chainId === MONAD_TESTNET_CHAIN_ID,
+      enabled: chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
     }
   });
 
@@ -46,7 +46,7 @@ export function useSalaryStreaming() {
     abi: SalaryStreamingABI.abi,
     functionName: "getAllMonthlyStreams",
     query: {
-      enabled: chainId === MONAD_TESTNET_CHAIN_ID,
+      enabled: chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
     }
   });
 
@@ -67,8 +67,8 @@ export function useSalaryStreaming() {
     useWaitForTransactionReceipt({ hash: createHash });
 
   const createStreamFn = async (streams: StreamDetails[], intervalType: 1 | 2) => {
-    if (chainId !== MONAD_TESTNET_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Monad Testnet");
+    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
+      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
 
@@ -99,8 +99,8 @@ export function useSalaryStreaming() {
   const { isLoading: isPausingDaily } = useWaitForTransactionReceipt({ hash: pauseDailyHash });
 
   const pauseDailyStream = async (streamId: number) => {
-    if (chainId !== MONAD_TESTNET_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Monad Testnet");
+    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
+      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
 
@@ -121,8 +121,8 @@ export function useSalaryStreaming() {
   const { isLoading: isPausingMonthly } = useWaitForTransactionReceipt({ hash: pauseMonthlyHash });
 
   const pauseMonthlyStream = async (streamId: number) => {
-    if (chainId !== MONAD_TESTNET_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Monad Testnet");
+    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
+      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
 
@@ -143,8 +143,8 @@ export function useSalaryStreaming() {
   const { isLoading: isResumingDaily } = useWaitForTransactionReceipt({ hash: resumeDailyHash });
 
   const resumeDailyStream = async (streamId: number) => {
-    if (chainId !== MONAD_TESTNET_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Monad Testnet");
+    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
+      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
 
@@ -165,8 +165,8 @@ export function useSalaryStreaming() {
   const { isLoading: isResumingMonthly } = useWaitForTransactionReceipt({ hash: resumeMonthlyHash });
 
   const resumeMonthlyStream = async (streamId: number) => {
-    if (chainId !== MONAD_TESTNET_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Monad Testnet");
+    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
+      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
 

@@ -54,8 +54,8 @@ export default function LandingNavbar() {
           : "bg-transparent"
       }`}
     >
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-18">
+      <div className="px-6 lg:px-36">
+        <div className="flex items-center justify-between h-16 lg:h-24">
           {/* Logo */}
           <Link href={logoHref} className="flex items-center gap-2.5 shrink-0">
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">

@@ -94,7 +94,7 @@ export default function ServicesSection() {
     <>
       {/* ── Foundations strip ── */}
       <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 grid lg:grid-cols-2 gap-16 items-center">
+        <div className="px-6 lg:px-36 grid lg:grid-cols-2 gap-16 items-center">
           <FadeIn>
             <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-3">
               Foundations

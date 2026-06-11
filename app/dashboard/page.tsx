@@ -9,9 +9,9 @@ import ActivityChart from "../../components/dashboard/ActivityChart";
 import RubbiTokenABI from "@/Abis/RubbiToken.json";
 import ModalABI from "@/Abis/Modal.json";
 
-const MONAD_TESTNET_CHAIN_ID = 10143;
 const rubbiTokenAddress = process.env.NEXT_PUBLIC_RUBBI_TOKEN_ADDRESS as `0x${string}`;
 const modalContractAddress = process.env.NEXT_PUBLIC_MODAL_CONTRACT_ADDRESS as `0x${string}`;
+const ARBITRUM_SEPOLIA_RPC = "https://sepolia-rollup.arbitrum.io/rpc";
 
 const statusColors: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
@@ -43,7 +43,7 @@ export default function DashboardPage() {
 
       try {
         const [rubbiRes, modalRes] = await Promise.all([
-          fetch(`https://testnet-rpc.monad.xyz`, {
+          fetch(ARBITRUM_SEPOLIA_RPC, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -53,7 +53,7 @@ export default function DashboardPage() {
               id: 1,
             }),
           }),
-          fetch(`https://testnet-rpc.monad.xyz`, {
+          fetch(ARBITRUM_SEPOLIA_RPC, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -97,12 +97,12 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl lg:text-3xl font-extrabold text-neutral-900">Dashboard</h1>
           <p className="text-sm text-neutral-500 mt-1">
-            Real-time surveillance of your liquidity nodes and automated salary streams across the Monad ledger.
+            Real-time surveillance of your liquidity nodes and automated salary streams across the Arbitrum ledger.
           </p>
         </div>
         <div className="flex items-center gap-2 bg-white border border-neutral-200 rounded-xl px-3 py-2">
           <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">Monad Testnet</span>
+          <span className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">Arbitrum Sepolia</span>
         </div>
       </div>
 

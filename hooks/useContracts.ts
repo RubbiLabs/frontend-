@@ -5,7 +5,7 @@ import ModalABI from "@/Abis/Modal.json";
 import { useEffect } from "react";
 import { useToast } from "@/context/ToastContext";
 
-const MONAD_TESTNET_CHAIN_ID = 10143;
+const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 
 const subscriptionServiceAddress = process.env.NEXT_PUBLIC_SUBSCRIPTION_SERVICE_ADDRESS as `0x${string}`;
 const modalContractAddress = process.env.NEXT_PUBLIC_MODAL_CONTRACT_ADDRESS as `0x${string}`;
@@ -25,7 +25,7 @@ export function useSubscription() {
   } = useBlockchainStore();
 
   useEffect(() => {
-    setIsCorrectNetwork(chainId === MONAD_TESTNET_CHAIN_ID);
+    setIsCorrectNetwork(chainId === ARBITRUM_SEPOLIA_CHAIN_ID);
   }, [chainId, setIsCorrectNetwork]);
 
   const { data: plansData, isLoading: isLoadingPlans, refetch: refetchPlans } = useReadContract({
@@ -33,7 +33,7 @@ export function useSubscription() {
     abi: SubscriptionServiceABI.abi,
     functionName: "getAllSubscriptionPlans",
     query: {
-      enabled: !!address && chainId === MONAD_TESTNET_CHAIN_ID,
+      enabled: !!address && chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
     }
   });
 
@@ -43,7 +43,7 @@ export function useSubscription() {
     functionName: "getSubscriptionsOfAddress",
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && chainId === MONAD_TESTNET_CHAIN_ID,
+      enabled: !!address && chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
     }
   });
 
@@ -65,8 +65,8 @@ export function useSubscription() {
     useWaitForTransactionReceipt({ hash: subscribeHash });
 
   const startSubscription = async (planId: number, email: string, password: string) => {
-    if (chainId !== MONAD_TESTNET_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Monad Testnet");
+    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
+      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
     
@@ -97,8 +97,8 @@ export function useSubscription() {
   const { isLoading: isPausing } = useWaitForTransactionReceipt({ hash: pauseHash });
 
   const pauseSubscription = async (planId: number) => {
-    if (chainId !== MONAD_TESTNET_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Monad Testnet");
+    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
+      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
 
@@ -119,8 +119,8 @@ export function useSubscription() {
   const { isLoading: isResuming } = useWaitForTransactionReceipt({ hash: resumeHash });
 
   const resumeSubscription = async (planId: number) => {
-    if (chainId !== MONAD_TESTNET_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Monad Testnet");
+    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
+      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
 
@@ -158,7 +158,7 @@ export function useModalContract() {
   const { showToast } = useToast();
 
   useEffect(() => {
-    setIsCorrectNetwork(chainId === MONAD_TESTNET_CHAIN_ID);
+    setIsCorrectNetwork(chainId === ARBITRUM_SEPOLIA_CHAIN_ID);
   }, [chainId, setIsCorrectNetwork]);
 
   const { data: balanceData, refetch: refetchBalance } = useReadContract({
@@ -167,7 +167,7 @@ export function useModalContract() {
     functionName: "getBalances",
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && chainId === MONAD_TESTNET_CHAIN_ID,
+      enabled: !!address && chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
     }
   });
 
@@ -181,8 +181,8 @@ export function useModalContract() {
   const { isLoading: isDepositing } = useWaitForTransactionReceipt({ hash: depositHash });
 
   const depositFunds = async (amount: bigint) => {
-    if (chainId !== MONAD_TESTNET_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Monad Testnet");
+    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
+      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
 

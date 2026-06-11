@@ -67,7 +67,7 @@ export default function TestimonialsSection() {
     <>
       {/* ── Testimonials ── */}
       <section className="py-24 bg-neutral-50">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="px-6 lg:px-36">
           <div className="grid lg:grid-cols-3 gap-10 items-start">
             <FadeIn>
               <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-3">

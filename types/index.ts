@@ -51,7 +51,7 @@ export interface Toast {
   duration?: number;
 }
 
-export type BridgeToken = "USDC" | "USDT" | "DAI" | "MON" | "ETH";
+export type BridgeToken = "USDC" | "USDT" | "DAI" | "ARB" | "ETH";
 export type BridgeNetwork = "BSC (BEP20)" | "ERC20" | "TRON20";
 
 // Token prices in USD (approximate)
@@ -59,7 +59,7 @@ export const TOKEN_USD_PRICES: Record<BridgeToken, number> = {
   USDC: 1.0,
   USDT: 1.0,
   DAI: 1.0,
-  MON: 0.5,
+  ARB: 1.0,
   ETH: 3200,
 };
 
