@@ -226,7 +226,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     try {
       if ((window as Window & { ethereum?: any }).ethereum) {
-        const ethereum = (window as Window & { ethereum: any }).ethereum;
+        const ethereum = (window as any).ethereum;
         const accounts: string[] = await ethereum.request({
           method: "eth_requestAccounts",
         });

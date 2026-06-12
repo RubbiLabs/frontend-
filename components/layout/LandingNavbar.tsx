@@ -6,6 +6,7 @@ import { Menu, X, Wallet } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
 import Button from "@/components/ui/Button";
+import RubbiLogo from "@/components/ui/RubbiLogo";
 
 export default function LandingNavbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -58,14 +59,7 @@ export default function LandingNavbar() {
         <div className="flex items-center justify-between h-16 lg:h-24">
           {/* Logo */}
           <Link href={logoHref} className="flex items-center gap-2.5 shrink-0">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
-                <path d="M12 8H26C31.523 8 36 12.477 36 18C36 22.072 33.572 25.572 30.08 27.2L36 40H28L22.8 28H20V40H12V8Z" fill="#F7F7F2"/>
-                <path d="M20 14V22H26C28.209 22 30 20.209 30 18C30 15.791 28.209 14 26 14H20Z" fill="#22577A"/>
-                <circle cx="38" cy="38" r="4" fill="#8C7851"/>
-              </svg>
-            </div>
-            <span className="text-xl font-bold text-primary tracking-tight">Rubbi</span>
+            <RubbiLogo size={36} />
           </Link>
 
           {/* Desktop Links */}

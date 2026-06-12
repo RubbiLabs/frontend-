@@ -56,6 +56,7 @@ export default function SalaryStreamsPage() {
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [disburseLoading, setDisburseLoading] = useState(false);
 
+  const [recipientName, setRecipientName] = useState("");
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [interval, setInterval] = useState<Interval>("Monthly");
@@ -138,6 +139,10 @@ export default function SalaryStreamsPage() {
       toast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
+    if (!recipientName.trim()) {
+      toast("error", "Missing Recipient Name", "Please enter the recipient's name.");
+      return;
+    }
     if (!recipient.trim()) {
       toast("error", "Missing Recipient", "Please enter a recipient address.");
       return;
@@ -149,7 +154,7 @@ export default function SalaryStreamsPage() {
 
     const streamDetails: StreamDetails[] = [
       {
-        name: `Stream to ${formatAddress(recipient)}`,
+        name: recipientName.trim(),
         recipient: recipient as `0x${string}`,
         amount: BigInt(Math.floor(Number(amount) * 1e18)),
       },
@@ -160,7 +165,8 @@ export default function SalaryStreamsPage() {
     setCreateLoading(true);
     try {
       await createStream(streamDetails, intervalType);
-      toast("success", "Stream Created!", `Stream of ${amount} USDC/${interval} initiated.`);
+      toast("success", "Stream Created!", `Stream of ${amount} RUB/${interval} initiated for ${recipientName.trim()}.`);
+      setRecipientName("");
       setRecipient("");
       setAmount("");
     } catch (err: any) {
@@ -215,6 +221,17 @@ export default function SalaryStreamsPage() {
             </div>
 
             <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Recipient Name</label>
+                <input
+                  type="text"
+                  placeholder="Alex Rivera"
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                  className="w-full px-4 py-3 bg-neutral-50 border-2 border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Recipient Address</label>
                 <div className="relative">
@@ -280,7 +297,7 @@ export default function SalaryStreamsPage() {
           </div>
 
           <div className="space-y-3">
-            {streams.map((stream, i) => (
+            {displayStreams.map((stream, i) => (
               <div key={stream.id} className="bg-white rounded-2xl p-5 border border-neutral-100 flex items-center gap-4">
                 <div className={`w-11 h-11 ${avatarColors[i % avatarColors.length]} rounded-xl flex items-center justify-center shrink-0`}>
                   <span className="text-white text-sm font-bold">{stream.avatar}</span>
@@ -288,7 +305,7 @@ export default function SalaryStreamsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <p className="font-bold text-neutral-800 text-sm">{stream.name}</p>
-                    <span className="text-xs text-neutral-400 font-mono">{stream.address}</span>
+                    <span className="text-xs text-neutral-400 font-mono">{formatAddress(stream.address)}</span>
                     <span className={`w-2 h-2 rounded-full ${stream.status === "active" ? "bg-green-400" : "bg-amber-400"}`} />
                     {stream.status === "paused" && <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">PAUSED</span>}
                   </div>

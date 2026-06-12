@@ -1,57 +1,26 @@
 "use client";
 import React, { useRef, useState } from "react";
+import Image from "next/image";
 import { Pause, Play, X } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import VirtualCardModal from "../../../components/dashboard/VirtualCardModal";
 import { useWallet } from "../../../context/WalletContext";
 import { useToast } from "../../../context/ToastContext";
-
-interface Subscription {
-  id: string;
-  name: string;
-  fee: number;
-  nextPayment: string;
-  streamId: string;
-  uptime: string;
-  status: "active" | "paused";
-  color: string;
-}
-
-interface CatalogItem {
-  name: string;
-  fee: number;
-  period: string;
-  color: string;
-  category: "entertainment" | "cloud" | "finance";
-}
-
-const mockSubs: Subscription[] = [
-  { id: "1", name: "Netflix Premium", fee: 15.99, nextPayment: "Nov 24, 2024", streamId: "#RB-7729-001", uptime: "342 Days", status: "active", color: "bg-red-600" },
-  { id: "2", name: "DSTV Premium Plus", fee: 45.0, nextPayment: "Pending", streamId: "#RB-7730-002", uptime: "120 Days", status: "paused", color: "bg-blue-800" },
-  { id: "3", name: "Spotify Family Plan", fee: 9.99, nextPayment: "Nov 30, 2024", streamId: "#RB-7731-003", uptime: "200 Days", status: "active", color: "bg-green-600" },
-  { id: "4", name: "AWS Cloud Instance", fee: 71.52, nextPayment: "Dec 1, 2024", streamId: "#RB-7732-004", uptime: "90 Days", status: "active", color: "bg-orange-500" },
-];
-
-const catalog: CatalogItem[] = [
-  { name: "Disney+ Standard", fee: 7.99, period: "MONTH", color: "bg-blue-600", category: "entertainment" },
-  { name: "YouTube Premium", fee: 11.99, period: "MONTH", color: "bg-red-500", category: "entertainment" },
-  { name: "Creative Cloud", fee: 52.99, period: "MONTH", color: "bg-red-700", category: "cloud" },
-  { name: "Figma Professional", fee: 15.0, period: "MONTH", color: "bg-purple-600", category: "finance" },
-  { name: "GitHub Pro", fee: 4.0, period: "MONTH", color: "bg-neutral-800", category: "cloud" },
-  { name: "Notion Plus", fee: 8.0, period: "MONTH", color: "bg-neutral-700", category: "cloud" },
-];
+import { defaultSubscriptions, subscriptionCatalog, type CatalogItem, type SubscriptionPlan } from "@/lib/subscriptions";
 
 const statusBadge: Record<string, string> = {
   active: "bg-green-100 text-green-700",
   paused: "bg-amber-100 text-amber-700 uppercase",
+  inactive: "bg-neutral-100 text-neutral-600 uppercase",
+  canceled: "bg-red-100 text-red-700 uppercase",
 };
 
-type CategoryFilter = "all" | "entertainment" | "cloud" | "finance";
+type CategoryFilter = "all" | "entertainment" | "cloud" | "productivity";
 
 export default function SubscriptionsPage() {
   const { hasVirtualCard, virtualCardData } = useWallet();
   const { success, error, info } = useToast();
-  const [subs, setSubs] = useState<Subscription[]>(mockSubs);
+  const [subs, setSubs] = useState<SubscriptionPlan[]>(defaultSubscriptions);
   const [cardModalOpen, setCardModalOpen] = useState(false);
   const [pendingSubscribe, setPendingSubscribe] = useState<CatalogItem | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -66,7 +35,8 @@ export default function SubscriptionsPage() {
     }, 120);
   };
 
-  const handlePauseResume = async (sub: Subscription) => {
+  const handlePauseResume = async (sub: SubscriptionPlan) => {
+    if (sub.status !== "active" && sub.status !== "paused") return;
     setLoadingId(sub.id);
     await new Promise((resolve) => setTimeout(resolve, 900));
     setSubs((prev) =>
@@ -78,9 +48,13 @@ export default function SubscriptionsPage() {
     setLoadingId(null);
   };
 
-  const handleCancel = (sub: Subscription) => {
-    setSubs((prev) => prev.filter((item) => item.id !== sub.id));
-    info("Subscription Cancelled", `${sub.name} has been removed.`);
+  const handleCancel = (sub: SubscriptionPlan) => {
+    setSubs((prev) =>
+      prev.map((item) =>
+        item.id === sub.id ? { ...item, status: "canceled", nextPayment: "Canceled" } : item
+      )
+    );
+    info("Subscription Cancelled", `${sub.name} has been canceled.`);
   };
 
   const doSubscribe = (item: CatalogItem) => {
@@ -90,7 +64,7 @@ export default function SubscriptionsPage() {
       return;
     }
 
-    const newSub: Subscription = {
+    const newSub: SubscriptionPlan = {
       id: Date.now().toString(),
       name: item.name,
       fee: item.fee,
@@ -99,6 +73,9 @@ export default function SubscriptionsPage() {
       uptime: "0 Days",
       status: "active",
       color: item.color,
+      logo: item.logo,
+      plan: item.plan,
+      cardLastFour: virtualCardData?.lastFour ?? "6721",
     };
 
     setSubs((prev) => [...prev, newSub]);
@@ -128,7 +105,7 @@ export default function SubscriptionsPage() {
   };
 
   const filteredCatalog =
-    categoryFilter === "all" ? catalog : catalog.filter((item) => item.category === categoryFilter);
+    categoryFilter === "all" ? subscriptionCatalog : subscriptionCatalog.filter((item) => item.category === categoryFilter);
 
   return (
     <div className="space-y-8 animate-fadeIn">
@@ -148,8 +125,8 @@ export default function SubscriptionsPage() {
           <div className="bg-white rounded-2xl p-6 border border-neutral-100 mb-4">
             <div className="flex flex-col lg:flex-row lg:items-center gap-6">
               <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className={`w-14 h-14 ${subs[0].color} rounded-xl flex items-center justify-center shrink-0`}>
-                  <span className="text-white font-bold text-xl">{subs[0].name.charAt(0)}</span>
+                <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-neutral-100 shrink-0">
+                  <Image src={subs[0].logo} alt={`${subs[0].name} logo`} fill className="object-cover" sizes="56px" />
                 </div>
                 <div className="min-w-0">
                   <h3 className="text-lg font-bold text-neutral-900">{subs[0].name}</h3>
@@ -177,15 +154,17 @@ export default function SubscriptionsPage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outlined"
-                  icon={subs[0].status === "active" ? <Pause size={14} /> : <Play size={14} />}
-                  loading={loadingId === subs[0].id}
-                  onClick={() => handlePauseResume(subs[0])}
-                >
-                  {subs[0].status === "active" ? "Pause" : "Resume"}
-                </Button>
+                {(subs[0].status === "active" || subs[0].status === "paused") && (
+                  <Button
+                    size="sm"
+                    variant="outlined"
+                    icon={subs[0].status === "active" ? <Pause size={14} /> : <Play size={14} />}
+                    loading={loadingId === subs[0].id}
+                    onClick={() => handlePauseResume(subs[0])}
+                  >
+                    {subs[0].status === "active" ? "Pause" : "Resume"}
+                  </Button>
+                )}
                 <Button size="sm" variant="danger" icon={<X size={14} />} onClick={() => handleCancel(subs[0])}>
                   Cancel
                 </Button>
@@ -198,8 +177,8 @@ export default function SubscriptionsPage() {
           {subs.slice(1).map((sub) => (
             <div key={sub.id} className="bg-white rounded-2xl p-5 border border-neutral-100 hover:shadow-card transition-all">
               <div className="flex items-center justify-between mb-4">
-                <div className={`w-11 h-11 ${sub.color} rounded-xl flex items-center justify-center`}>
-                  <span className="text-white font-bold">{sub.name.charAt(0)}</span>
+                <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-neutral-100">
+                  <Image src={sub.logo} alt={`${sub.name} logo`} fill className="object-cover" sizes="44px" />
                 </div>
                 <div className="text-right">
                   <p className="text-lg font-extrabold text-neutral-900">{sub.fee.toFixed(2)}</p>
@@ -217,9 +196,13 @@ export default function SubscriptionsPage() {
                   <Button size="sm" fullWidth loading={loadingId === sub.id} onClick={() => handlePauseResume(sub)} icon={<Play size={13} />}>
                     Resume
                   </Button>
-                ) : (
+                ) : sub.status === "active" ? (
                   <Button size="sm" variant="outlined" fullWidth loading={loadingId === sub.id} onClick={() => handlePauseResume(sub)} icon={<Pause size={13} />}>
                     Pause
+                  </Button>
+                ) : (
+                  <Button size="sm" variant="ghost" fullWidth disabled>
+                    {sub.status === "canceled" ? "Canceled" : "Inactive"}
                   </Button>
                 )}
               </div>
@@ -249,7 +232,7 @@ export default function SubscriptionsPage() {
             <p className="text-xs text-neutral-400 mt-0.5">Instant Ledger-to-Vendor settlements</p>
           </div>
           <div className="flex gap-2">
-            {(["all", "entertainment", "cloud", "finance"] as CategoryFilter[]).map((cat) => (
+            {(["all", "entertainment", "cloud", "productivity"] as CategoryFilter[]).map((cat) => (
               <button
                 key={cat}
                 onClick={() => setCategoryFilter(cat)}
@@ -266,8 +249,8 @@ export default function SubscriptionsPage() {
             const subscribed = subs.some((sub) => sub.name === item.name);
             return (
               <div key={item.name} className="bg-white rounded-2xl p-5 border border-neutral-100 hover:shadow-card transition-all">
-                <div className={`w-11 h-11 ${item.color} rounded-xl flex items-center justify-center mb-4`}>
-                  <span className="text-white font-bold">{item.name.charAt(0)}</span>
+                <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-neutral-100 mb-4">
+                  <Image src={item.logo} alt={`${item.name} logo`} fill className="object-cover" sizes="44px" />
                 </div>
                 <p className="font-bold text-neutral-800 text-sm mb-1">{item.name}</p>
                 <p className="text-xs text-neutral-400 mb-4">
