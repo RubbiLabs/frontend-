@@ -41,8 +41,8 @@ export default function AboutPage() {
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-primary/4 blur-3xl" />
         </div>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
+        <div className="px-6 lg:px-36">
+          <div className="grid lg:grid-cols-2 gap-16 items-center mt-28">
             <div>
               <div className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-4 animate-fadeIn">Foundations of Financial Autonomy</div>
               <h1 className="text-5xl lg:text-6xl font-extrabold text-neutral-900 leading-[1.05] tracking-tight mb-6 animate-slideUp">
@@ -70,7 +70,7 @@ export default function AboutPage() {
 
       {/* MISSION */}
       <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="px-6 lg:px-36">
           <div className="grid lg:grid-cols-2 gap-16 items-start">
             <FadeIn>
               <h2 className="text-3xl lg:text-4xl font-extrabold text-neutral-900 mb-6">A Mission of Permanence</h2>
@@ -115,7 +115,7 @@ export default function AboutPage() {
 
       {/* STATS */}
       <section className="py-20 bg-primary">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="px-6 lg:px-36">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-10">
             {[
               { val: "$0.00B", label: "Initial Capital Secured" },

@@ -59,7 +59,7 @@ export default function LandingNavbar() {
         <div className="flex items-center justify-between h-16 lg:h-24">
           {/* Logo */}
           <Link href={logoHref} className="flex items-center gap-2.5 shrink-0">
-            <RubbiLogo size={36} />
+            <RubbiLogo size={30} />
           </Link>
 
           {/* Desktop Links */}
