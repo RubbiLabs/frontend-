@@ -58,8 +58,12 @@ export default function LandingNavbar() {
       <div className="px-6 lg:px-36">
         <div className="flex items-center justify-between h-16 lg:h-24">
           {/* Logo */}
-          <Link href={logoHref} className="flex items-center gap-2.5 shrink-0">
-            <RubbiLogo size={30} />
+          <Link href={logoHref} className="flex items-end gap-0">
+            <RubbiLogo size={28} />
+            <span className="text-xl font-bold text-primary">
+              <span className="text-2xl text-primary-400 font-extrabold">u</span>
+            bbi
+            </span>
           </Link>
 
           {/* Desktop Links */}

@@ -29,9 +29,14 @@ export default function LandingFooter() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <Link href={logoHref} className="flex items-center gap-2.5 mb-4">
-              <RubbiLogo size={38} />
-            </Link>
+            <Link href={logoHref} className="flex items-end mb-5">
+                        <RubbiLogo size={28} />
+                        <span className="text-xl font-bold text-primary">
+                          <span className="text-2xl text-primary-400 font-extrabold">u</span>
+                        bbi
+                        </span>
+                      </Link>
+
             <p className="text-sm text-neutral-500 leading-relaxed max-w-xs">
               Building the architectural foundations for a decentralized, autonomous financial era.
               Permanent. Trustworthy. Tactile.
