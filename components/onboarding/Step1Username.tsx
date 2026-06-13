@@ -120,7 +120,7 @@ export default function Step1Username({ onComplete, onSkip }: Props) {
           </div>
           <div>
             <p className="text-[9px] text-white/40 uppercase tracking-wider">Network</p>
-            <p className="text-sm font-semibold text-white">MONAD L1</p>
+            <p className="text-sm font-semibold text-white">Arbitrum sepolia</p>
           </div>
         </div>
         <p className="text-sm font-bold text-white/90">@{value || "username"}</p>

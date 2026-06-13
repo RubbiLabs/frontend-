@@ -73,7 +73,7 @@ export default function HeroSection() {
         </div>
 
         {/* ── Right animated scene ── */}
-        <div className="relative hidden lg:block">
+        {/* <div className="relative hidden lg:block">
           <div className="relative w-full max-w-[560px] ml-auto">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/12 via-transparent to-tertiary/10 blur-3xl scale-95" />
 
@@ -121,7 +121,7 @@ export default function HeroSection() {
                       </div>
                       <div className="flex items-center justify-between rounded-2xl bg-white/8 px-4 py-3">
                         <span className="text-sm font-semibold">Salary Flow</span>
-                        <span className="text-xs text-white/65">0.25 MON/hr</span>
+                        <span className="text-xs text-white/65">0.25 ETH/hr</span>
                       </div>
                     </div>
                   </div>
@@ -165,7 +165,7 @@ export default function HeroSection() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
     </section>
   );

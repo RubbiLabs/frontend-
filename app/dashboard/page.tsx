@@ -95,7 +95,7 @@ export default function DashboardPage() {
     <div className="space-y-6 animate-fadeIn">
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-extrabold text-neutral-900">Dashboard</h1>
+          <h1 className="text-2xl lg:text-3xl font-extrabold text-neutral-900">Overview</h1>
           <p className="text-sm text-neutral-500 mt-1">
             Real-time surveillance of your liquidity nodes and automated salary streams across the Arbitrum ledger.
           </p>

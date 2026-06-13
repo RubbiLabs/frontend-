@@ -7,7 +7,10 @@ import CustomDropdown from "../../../components/ui/CustomDropdown";
 import { useToast } from "../../../context/ToastContext";
 import { useSalaryStreaming, StreamDetails } from "@/hooks/useSalaryStreaming";
 import { useNetworkSwitch } from "@/hooks/useNetworkSwitch";
-import { useAccount } from "wagmi";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import SalaryStreamingABI from "@/Abis/SalaryStreaming.json";
+
+const SALARY_STREAMING_ADDRESS = process.env.NEXT_PUBLIC_SALARY_STREAMING_ADDRESS as `0x${string}`;
 
 type Interval = "Monthly" | "Weekly" | "Daily";
 type StreamStatus = "active" | "paused";

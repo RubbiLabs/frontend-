@@ -146,7 +146,7 @@ export default function Step3VirtualCard({ onComplete, onSkip }: Props) {
 			lastFour,
 			expiry,
 			cvv: String(Math.floor(100 + Math.random() * 900)),
-			network: "MONAD L1",
+			network: "Arbitrum Sepolia",
 			isActive: true,
 		});
 		setGenerated(true);

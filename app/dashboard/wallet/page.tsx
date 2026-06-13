@@ -7,22 +7,17 @@ import {
   CheckCircle,
   Droplets,
   RefreshCw,
+  ArrowLeftRight,
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
 import { useNetworkSwitch } from "@/hooks/useNetworkSwitch";
+import { useModalContract } from "@/hooks/useContracts";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
+import RubbiTokenABI from "@/Abis/RubbiToken.json";
 
-const CLAIM_LIMIT = 3;
-const CLAIM_AMOUNT = 100;
-const FAUCET_CLAIMS_KEY = "rubbi_faucet_claims";
-
-const mockActivity = [
-  { id: "1", label: "Faucet Claim", sub: "TODAY, 08:45 AM", amount: "+100.00", positive: true, icon: "faucet" },
-  { id: "2", label: "Contract Deposit", sub: "YESTERDAY", amount: "-500.00", positive: false, icon: "deposit" },
-  { id: "3", label: "Salary Stream", sub: "2 DAYS AGO", amount: "+1,245.00", positive: true, icon: "stream" },
-  { id: "4", label: "Subscription Fee", sub: "3 DAYS AGO", amount: "-15.99", positive: false, icon: "subscription" },
-];
+const RUB_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_RUBBI_TOKEN_ADDRESS as `0x${string}`;
 
 function ActivityIcon({ type }: { type: string }) {
   if (type === "faucet") {
@@ -60,31 +55,35 @@ export default function WalletPage() {
   const { rubBalance, setRubBalance, address } = useWallet();
   const { success, error, info } = useToast();
   const { isCorrectNetwork, isConnected, switchToArbitrum } = useNetworkSwitch();
-  const [claimCount, setClaimCount] = useState(0);
+  const { balance: modalBalance, depositFunds, refetchBalance } = useModalContract();
+  const { isConnected: wagmiConnected } = useAccount();
+
   const [claimLoading, setClaimLoading] = useState(false);
   const [depositModal, setDepositModal] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
   const [depositLoading, setDepositLoading] = useState(false);
-  const [activity, setActivity] = useState(mockActivity);
+  const [activity, setActivity] = useState<any[]>([]);
+
+  // Faucet claim: call RubbiToken.claimFaucet()
+  const { writeContract: writeClaimFaucet, data: claimTxHash, isPending: isClaimPending } = useWriteContract();
+  const { isLoading: isClaimConfirming, isSuccess: claimSuccess } = useWaitForTransactionReceipt({ hash: claimTxHash });
+
+  // Read faucet claim count from contract
+  const { data: faucetClaimCount } = useReadContract({
+    address: RUB_TOKEN_ADDRESS,
+    abi: RubbiTokenABI.abi,
+    functionName: "faucetClaimCount",
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && !!RUB_TOKEN_ADDRESS },
+  });
+
+  const CLAIM_LIMIT = 3;
+  const CLAIM_AMOUNT = 100;
+  const claimCount = faucetClaimCount ? Number(faucetClaimCount) : 0;
+  const claimsRemaining = Math.max(0, CLAIM_LIMIT - claimCount);
 
   const balance = Number(rubBalance || 0);
   const usdValue = (balance / 50).toFixed(2);
-  const claimsRemaining = Math.max(0, CLAIM_LIMIT - claimCount);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !address) {
-      setClaimCount(0);
-      return;
-    }
-
-    try {
-      const stored = localStorage.getItem(FAUCET_CLAIMS_KEY);
-      const parsed = stored ? (JSON.parse(stored) as Record<string, number>) : {};
-      setClaimCount(parsed[address] ?? 0);
-    } catch {
-      setClaimCount(0);
-    }
-  }, [address]);
 
   const handleClaim = async () => {
     if (!address) {
@@ -104,34 +103,45 @@ export default function WalletPage() {
 
     setClaimLoading(true);
     info("Claiming Faucet...", "Broadcasting transaction to Arbitrum Sepolia.");
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-
-    const newBalance = balance + CLAIM_AMOUNT;
-    const nextClaimCount = claimCount + 1;
-    setRubBalance(String(newBalance));
-    setClaimCount(nextClaimCount);
 
     try {
-      const stored = localStorage.getItem(FAUCET_CLAIMS_KEY);
-      const parsed = stored ? (JSON.parse(stored) as Record<string, number>) : {};
-      parsed[address] = nextClaimCount;
-      localStorage.setItem(FAUCET_CLAIMS_KEY, JSON.stringify(parsed));
-    } catch {}
-
-    setActivity((prev) => [
-      {
-        id: Date.now().toString(),
-        label: "Faucet Claim",
-        sub: "JUST NOW",
-        amount: `+${CLAIM_AMOUNT.toFixed(2)}`,
-        positive: true,
-        icon: "faucet",
-      },
-      ...prev,
-    ]);
-    success(`${CLAIM_AMOUNT} RUBBI Claimed!`, `${Math.max(0, CLAIM_LIMIT - nextClaimCount)} lifetime claim${Math.max(0, CLAIM_LIMIT - nextClaimCount) === 1 ? "" : "s"} remaining for this wallet.`);
-    setClaimLoading(false);
+      writeClaimFaucet({
+        address: RUB_TOKEN_ADDRESS,
+        abi: RubbiTokenABI.abi,
+        functionName: "claimFaucet",
+      });
+    } catch (err: any) {
+      error("Claim Failed", err.message);
+      setClaimLoading(false);
+    }
   };
+
+  // After claim succeeds, update activity and balance
+  useEffect(() => {
+    if (claimSuccess) {
+      const newCount = claimCount + 1;
+      const newBalance = balance + CLAIM_AMOUNT;
+      setRubBalance(String(newBalance));
+
+      setActivity((prev) => [
+        {
+          id: Date.now().toString(),
+          label: "Faucet Claim",
+          sub: "JUST NOW",
+          amount: `+${CLAIM_AMOUNT}.00`,
+          positive: true,
+          icon: "faucet",
+        },
+        ...prev,
+      ]);
+
+      success(
+        `${CLAIM_AMOUNT} RUBBI Claimed!`,
+        `${Math.max(0, CLAIM_LIMIT - newCount)} lifetime claim${Math.max(0, CLAIM_LIMIT - newCount) === 1 ? "" : "s"} remaining.`
+      );
+      setClaimLoading(false);
+    }
+  }, [claimSuccess]);
 
   const handleDeposit = async () => {
     const amount = Number(depositAmount);
@@ -152,30 +162,38 @@ export default function WalletPage() {
     }
 
     setDepositLoading(true);
-    info("Depositing RUBBI...", "Preparing your Arbitrum Sepolia transaction.");
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    setActivity((prev) => [
-      {
-        id: Date.now().toString(),
-        label: "Contract Deposit",
-        sub: "JUST NOW",
-        amount: `-${amount.toFixed(2)}`,
-        positive: false,
-        icon: "deposit",
-      },
-      ...prev,
-    ]);
-    setDepositAmount("");
-    setDepositModal(false);
+    info("Depositing RUBBI...", "Approving and depositing to ModalContract.");
+
+    try {
+      const amountBigInt = BigInt(Math.floor(amount * 1e18));
+      await depositFunds(amountBigInt);
+
+      setActivity((prev) => [
+        {
+          id: Date.now().toString(),
+          label: "Contract Deposit",
+          sub: "JUST NOW",
+          amount: `-${amount.toFixed(2)}`,
+          positive: false,
+          icon: "deposit",
+        },
+        ...prev,
+      ]);
+
+      setDepositAmount("");
+      setDepositModal(false);
+      success("Deposit Submitted", `${amount.toFixed(2)} RUBBI deposited to ModalContract.`);
+    } catch (err: any) {
+      error("Deposit Failed", err.message);
+    }
     setDepositLoading(false);
-    success("Deposit Submitted", `${amount.toFixed(2)} RUBBI is being settled on Arbitrum Sepolia.`);
   };
 
   return (
     <div className="space-y-6 animate-fadeIn">
       <div>
         <h1 className="text-2xl lg:text-3xl font-extrabold text-neutral-900">Wallet</h1>
-        <p className="text-sm text-neutral-500 mt-1">Manage your RUBBI balance and claim faucet rewards.</p>
+        <p className="text-sm text-neutral-500 mt-1">Manage your RUBBI balance, claim faucet rewards, and deposit to ModalContract.</p>
       </div>
 
       {!isCorrectNetwork && isConnected && (
@@ -206,27 +224,47 @@ export default function WalletPage() {
             <p className="text-neutral-400 mt-2">≈ ${usdValue} USD (at 50 RUBBI = $1)</p>
 
             <div className="flex flex-wrap gap-3 mt-6">
-              <Button size="md" onClick={() => setDepositModal(true)}>Deposit</Button>
+              <Button size="md" onClick={() => setDepositModal(true)}>Deposit to Contract</Button>
+              <Button size="md" variant="outlined" onClick={() => window.location.href = "/dashboard/card"}>
+                <ArrowLeftRight size={14} className="mr-1" /> Swap Tokens
+              </Button>
             </div>
+          </div>
+
+          {/* ModalContract Balance */}
+          <div className="bg-white rounded-2xl p-6 border border-neutral-100 mt-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400">ModalContract Balance</h3>
+              <span className="text-xs text-neutral-400">For subscriptions & streams</span>
+            </div>
+            <p className="text-2xl font-extrabold text-primary">
+              {modalBalance ? (Number(modalBalance) / 1e18).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
+              <span className="text-lg font-bold text-neutral-400 ml-2">RUBBI</span>
+            </p>
+            <p className="text-xs text-neutral-400 mt-1">Deposited funds available for automated payments</p>
           </div>
 
           <div className="bg-white rounded-2xl p-6 border border-neutral-100 mt-4">
             <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-5">Recent Ledger Activity</h3>
-            <div className="space-y-4">
-              {activity.map((item) => (
-                <div key={item.id} className="flex items-center gap-4">
-                  <ActivityIcon type={item.icon} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-neutral-800">{item.label}</p>
-                    <p className="text-xs text-neutral-400 font-medium tracking-wider">{item.sub}</p>
+            {activity.length === 0 ? (
+              <p className="text-sm text-neutral-400 text-center py-4">No recent activity</p>
+            ) : (
+              <div className="space-y-4">
+                {activity.map((item) => (
+                  <div key={item.id} className="flex items-center gap-4">
+                    <ActivityIcon type={item.icon} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-neutral-800">{item.label}</p>
+                      <p className="text-xs text-neutral-400 font-medium tracking-wider">{item.sub}</p>
+                    </div>
+                    <p className={`text-sm font-extrabold ${item.positive ? "text-green-600" : "text-red-500"}`}>
+                      {item.amount}
+                      <span className="text-xs font-bold text-neutral-400 ml-1">RUBBI</span>
+                    </p>
                   </div>
-                  <p className={`text-sm font-extrabold ${item.positive ? "text-green-600" : "text-red-500"}`}>
-                    {item.amount}
-                    <span className="text-xs font-bold text-neutral-400 ml-1">RUBBI</span>
-                  </p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -237,7 +275,7 @@ export default function WalletPage() {
               <Droplets size={24} className="text-primary/30" />
             </div>
             <p className="text-xs text-neutral-500 leading-relaxed mb-5">
-              Claim RUBBI to test the Arbitrum Sepolia flow. Each wallet can receive this faucet a total of 3 times.
+              Claim 100 RUBBI per claim to test the platform. Each wallet can claim up to 3 times lifetime.
             </p>
 
             <div className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 mb-4">
@@ -248,20 +286,20 @@ export default function WalletPage() {
             <Button
               size="md"
               fullWidth
-              loading={claimLoading}
+              loading={claimLoading || isClaimPending || isClaimConfirming}
               disabled={!isConnected || !isCorrectNetwork || claimsRemaining <= 0}
               icon={<Droplets size={15} />}
               onClick={handleClaim}
             >
               {claimsRemaining > 0 ? `Claim ${CLAIM_AMOUNT} RUBBI` : "Limit Reached"}
             </Button>
-            <p className="text-center text-xs text-neutral-400 mt-3">Claim limit: 3 lifetime claims per wallet</p>
+            <p className="text-center text-xs text-neutral-400 mt-3">On-chain faucet • 3 lifetime claims per wallet</p>
           </div>
 
           <div className="bg-neutral-50 rounded-2xl p-5 border border-neutral-100">
             <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">Protocol Status</p>
             <p className="text-xs text-neutral-500 leading-relaxed">
-              Faucet distribution is wallet-scoped and tracks claims locally for this beta build.
+              Faucet distribution is on-chain via RubbiToken.claimFaucet(). Deposits go to ModalContract for subscription/stream payments.
             </p>
             <div className="flex items-center gap-2 mt-4">
               <CheckCircle size={14} className="text-green-500" />
@@ -282,7 +320,8 @@ export default function WalletPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setDepositModal(false)}>
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-scaleIn" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-bold text-neutral-900 mb-5">Deposit RUBBI</h2>
+            <h2 className="text-lg font-bold text-neutral-900 mb-2">Deposit RUBBI</h2>
+            <p className="text-xs text-neutral-400 mb-5">Deposit RUB tokens into ModalContract for subscriptions and salary streams.</p>
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Amount</label>
@@ -297,7 +336,10 @@ export default function WalletPage() {
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400">RUBBI</span>
                 </div>
               </div>
-              <p className="text-xs text-neutral-400">Deposit RUBBI tokens for subscription payments on Arbitrum Sepolia.</p>
+              <p className="text-xs text-neutral-400">
+                Your wallet balance: {balance.toFixed(2)} RUBBI. 
+                This calls ModalContract.deposit() on-chain to transfer tokens.
+              </p>
               <div className="flex gap-3">
                 <Button variant="ghost" size="md" fullWidth onClick={() => setDepositModal(false)}>Cancel</Button>
                 <Button size="md" fullWidth loading={depositLoading} onClick={handleDeposit}>Deposit</Button>

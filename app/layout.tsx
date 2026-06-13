@@ -4,7 +4,7 @@ import Providers from "./providers";
 
 export const metadata: Metadata = {
   title: "Rubbi — Decentralized Financial Automation",
-  description: "A heavy-duty ledger protocol for the Monad Network.",
+  description: "A decentralised financial automation platform on Arbitrum.",
 };
 
 export default function RootLayout({

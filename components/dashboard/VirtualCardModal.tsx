@@ -64,7 +64,7 @@ export default function VirtualCardModal({ open, onClose, onComplete }: Props) {
       lastFour: cardNumber.slice(-4),
       expiry: `${String(Math.floor(Math.random() * 12) + 1).padStart(2, "0")}/${String(new Date().getFullYear() + 4).slice(-2)}`,
       cvv: randomDigits(3),
-      network: "MONAD L1",
+      network: "Arbitrum sepolia",
       isActive: true,
     };
 

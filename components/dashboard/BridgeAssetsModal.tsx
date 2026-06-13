@@ -1,157 +1,339 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { ArrowDown, ArrowLeftRight, ChevronDown, Check, X, Info } from "lucide-react";
+import React, { useState } from "react";
+import {
+  ArrowDown,
+  ArrowLeftRight,
+  ChevronDown,
+  Check,
+  Settings,
+  Info,
+  ExternalLink,
+} from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
-import { useToast } from "@/context/ToastContext";
-import { BridgeToken, BridgeNetwork, TOKEN_USD_PRICES, RUB_PER_USD } from "@/types";
+import { useSwap } from "@/hooks/useSwap";
+import type { SwapToken } from "@/types";
 
-const TOKENS: BridgeToken[] = ["USDC", "USDT", "DAI", "ARB", "ETH"];
-const NETWORKS: BridgeNetwork[] = ["ERC20", "BSC (BEP20)", "TRON20"];
+const TOKENS: SwapToken[] = ["ETH", "ARB"];
 
-interface Props { open: boolean; onClose: () => void; }
+const tokenMeta: Record<
+  SwapToken,
+  { color: string; label: string; logo: string }
+> = {
+  ETH: {
+    color: "bg-indigo-500",
+    label: "Ethereum",
+    logo: "⟠",
+  },
+  ARB: {
+    color: "bg-sky-500",
+    label: "Arbitrum",
+    logo: "A",
+  },
+};
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+}
+
+function formatTokenAmount(value: bigint, decimals = 18): string {
+  if (value === 0n) return "0";
+  const str = value.toString();
+  if (str.length <= decimals) {
+    return `0.${str.padStart(decimals, "0")}`;
+  }
+  const intPart = str.slice(0, str.length - decimals);
+  const fracPart = str.slice(str.length - decimals);
+  // Trim trailing zeros
+  const trimmed = fracPart.replace(/0+$/, "");
+  return trimmed ? `${intPart}.${trimmed}` : intPart;
+}
+
+function formatUSD(value: bigint, price: number, decimals = 18): string {
+  const num = Number(value) / 10 ** decimals;
+  return (num * price).toFixed(2);
+}
 
 export default function BridgeAssetsModal({ open, onClose }: Props) {
-  const { success, error, info } = useToast();
-  const [token, setToken] = useState<BridgeToken>("USDC");
-  const [network, setNetwork] = useState<BridgeNetwork>("ERC20");
-  const [amount, setAmount] = useState("");
-  const [loading, setLoading] = useState(false);
+  const {
+    inputToken,
+    setInputToken,
+    inputAmount,
+    setInputAmount,
+    slippage,
+    setSlippage,
+    estimatedOutput,
+    inputBalance,
+    needsApproval,
+    approve,
+    isApproving,
+    swap,
+    isSwapping,
+    isLoading,
+    isQuoting,
+    swapTxHash,
+  } = useSwap();
+
   const [tokenOpen, setTokenOpen] = useState(false);
-  const [networkOpen, setNetworkOpen] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
-  const usdValue = Number(amount || 0) * TOKEN_USD_PRICES[token];
-  const rubReceive = usdValue * RUB_PER_USD;
+  const meta = tokenMeta[inputToken];
+  const hasInput = inputAmount && Number(inputAmount) > 0;
+  const hasOutput = estimatedOutput > 0n;
 
-  const tokenColors: Record<BridgeToken, string> = {
-    USDC: "bg-blue-500", USDT: "bg-green-500", DAI: "bg-yellow-500", ARB: "bg-sky-500", ETH: "bg-indigo-500",
+  const inputBalanceFormatted = formatTokenAmount(inputBalance);
+  const outputFormatted = hasOutput ? formatTokenAmount(estimatedOutput) : "—";
+
+  const handleMaxClick = () => {
+    // Leave a small buffer for gas if ETH
+    if (inputToken === "ETH") {
+      const max = inputBalance > parseEther("0.001") ? inputBalance - parseEther("0.001") : 0n;
+      setInputAmount(formatTokenAmount(max));
+    } else {
+      setInputAmount(formatTokenAmount(inputBalance));
+    }
   };
 
-  const networkColors: Record<BridgeNetwork, string> = {
-    "ERC20": "text-blue-600", "BSC (BEP20)": "text-yellow-600", "TRON20": "text-red-600",
-  };
-
-  const handleBridge = async () => {
-    if (!amount || Number(amount) <= 0) { error("Invalid Amount", "Please enter a valid amount to bridge."); return; }
-    setLoading(true);
-    info("Bridging Assets...", `Converting ${amount} ${token} to RUB`);
-    await new Promise(r => setTimeout(r, 2200));
-    success("Bridge Successful!", `${rubReceive.toLocaleString(undefined, { maximumFractionDigits: 2 })} RUB has been credited to your wallet.`);
-    setAmount("");
-    setLoading(false);
-    onClose();
+  const handleSwap = async () => {
+    if (needsApproval) {
+      await approve();
+    } else {
+      await swap();
+    }
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Bridge Assets" subtitle="Convert tokens to RUB at $1 = 50 RUB" size="sm">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Swap to RUB"
+      subtitle="Convert tokens to RUB via Uniswap V2"
+      size="sm"
+    >
       <div className="space-y-4">
-        {/* Token selector */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">From Token</label>
-          <div className="relative">
+        {/* From token + amount */}
+        <div className="bg-neutral-50 border-2 border-neutral-200 rounded-xl p-4 focus-within:border-primary transition-all">
+          <div className="flex items-center justify-between mb-2">
+            <label className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+              You Pay
+            </label>
             <button
               type="button"
-              onClick={() => { setTokenOpen(p => !p); setNetworkOpen(false); }}
-              className={`w-full flex items-center justify-between gap-2 px-4 py-3 bg-neutral-50 border-2 rounded-xl text-sm font-semibold transition-all ${tokenOpen ? "border-primary" : "border-neutral-200 hover:border-primary/40"}`}
+              onClick={handleMaxClick}
+              className="text-[10px] font-bold uppercase tracking-wider text-primary hover:underline"
             >
-              <div className="flex items-center gap-2">
-                <span className={`w-7 h-7 rounded-full ${tokenColors[token]} flex items-center justify-center text-white text-xs font-bold`}>{token.charAt(0)}</span>
-                <span>{token}</span>
-              </div>
-              <ChevronDown size={16} className={`text-neutral-400 transition-transform ${tokenOpen ? "rotate-180" : ""}`} />
+              Max
             </button>
-            {tokenOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-xl shadow-xl z-50 overflow-hidden animate-slideDown">
-                {TOKENS.map((t) => (
-                  <button key={t} type="button" onClick={() => { setToken(t); setTokenOpen(false); }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 transition-colors text-sm"
-                  >
-                    <span className={`w-6 h-6 rounded-full ${tokenColors[t]} flex items-center justify-center text-white text-xs font-bold`}>{t.charAt(0)}</span>
-                    <span className={token === t ? "text-primary font-semibold" : "text-neutral-700"}>{t}</span>
-                    {token === t && <Check size={14} className="ml-auto text-primary" />}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
-        </div>
-
-        {/* Network selector */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Network</label>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => { setNetworkOpen(p => !p); setTokenOpen(false); }}
-              className={`w-full flex items-center justify-between gap-2 px-4 py-3 bg-neutral-50 border-2 rounded-xl text-sm font-semibold transition-all ${networkOpen ? "border-primary" : "border-neutral-200 hover:border-primary/40"}`}
-            >
-              <span className={`font-semibold ${networkColors[network]}`}>{network}</span>
-              <ChevronDown size={16} className={`text-neutral-400 transition-transform ${networkOpen ? "rotate-180" : ""}`} />
-            </button>
-            {networkOpen && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-xl shadow-xl z-50 overflow-hidden animate-slideDown">
-                {NETWORKS.map((n) => (
-                  <button key={n} type="button" onClick={() => { setNetwork(n); setNetworkOpen(false); }}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-neutral-50 transition-colors text-sm"
-                  >
-                    <span className={network === n ? "text-primary font-semibold" : "text-neutral-700"}>{n}</span>
-                    {network === n && <Check size={14} className="ml-auto text-primary" />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Amount input */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Amount</label>
-          <div className="relative">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setTokenOpen(!tokenOpen);
+                  setShowSettings(false);
+                }}
+                className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-xl text-sm font-semibold hover:border-primary/40 transition-all"
+              >
+                <span
+                  className={`w-6 h-6 rounded-full ${meta.color} flex items-center justify-center text-white text-xs font-bold`}
+                >
+                  {meta.logo}
+                </span>
+                <span>{inputToken}</span>
+                <ChevronDown
+                  size={14}
+                  className={`text-neutral-400 transition-transform ${tokenOpen ? "rotate-180" : ""}`}
+                />
+              </button>
+              {tokenOpen && (
+                <div className="absolute top-full left-0 mt-1 bg-white border border-neutral-200 rounded-xl shadow-xl z-50 overflow-hidden animate-slideDown min-w-[140px]">
+                  {TOKENS.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => {
+                        setInputToken(t);
+                        setTokenOpen(false);
+                        setInputAmount("");
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 transition-colors text-sm"
+                    >
+                      <span
+                        className={`w-6 h-6 rounded-full ${tokenMeta[t].color} flex items-center justify-center text-white text-xs font-bold`}
+                      >
+                        {tokenMeta[t].logo}
+                      </span>
+                      <span
+                        className={
+                          inputToken === t
+                            ? "text-primary font-semibold"
+                            : "text-neutral-700"
+                        }
+                      >
+                        {tokenMeta[t].label}
+                      </span>
+                      {inputToken === t && (
+                        <Check size={14} className="ml-auto text-primary" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <input
               type="number"
               min="0"
+              step="any"
               placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-4 py-3 pr-16 bg-neutral-50 border-2 border-neutral-200 rounded-xl text-sm font-semibold focus:outline-none focus:border-primary transition-all"
+              value={inputAmount}
+              onChange={(e) => setInputAmount(e.target.value)}
+              className="flex-1 text-right text-2xl font-extrabold bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400">{token}</span>
+          </div>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-[11px] text-neutral-400">
+              Balance: {inputBalanceFormatted} {inputToken}
+            </p>
+            {hasInput && (
+              <p className="text-[11px] text-neutral-400">
+                ≈${formatUSD(parseEther(inputAmount || "0"), inputToken === "ETH" ? 3200 : 1)}
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Arrow */}
-        <div className="flex items-center justify-center">
-          <div className="w-9 h-9 bg-neutral-100 rounded-full flex items-center justify-center">
+        {/* Swap direction arrow */}
+        <div className="flex items-center justify-center -my-1 relative z-10">
+          <div
+            className="w-9 h-9 bg-neutral-100 border-2 border-white rounded-full flex items-center justify-center cursor-pointer hover:bg-primary/10 hover:border-primary/20 transition-all"
+            onClick={() => {
+              setInputAmount("");
+            }}
+          >
             <ArrowDown size={16} className="text-primary" />
           </div>
         </div>
 
-        {/* Receive output */}
+        {/* Output - RUB */}
         <div className="bg-primary/5 border-2 border-primary/10 rounded-xl p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-1">You Receive</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-extrabold text-primary">
-              {rubReceive > 0 ? rubReceive.toLocaleString(undefined, { maximumFractionDigits: 2 }) : "—"}
-            </span>
-            <span className="text-sm font-bold text-primary">RUB</span>
+          <label className="text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2 block">
+            You Receive
+          </label>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+              <span className="text-white text-xs font-extrabold">R</span>
+            </div>
+            <div className="flex-1">
+              <div className="text-2xl font-extrabold text-primary">
+                {isQuoting ? (
+                  <span className="text-neutral-300">Calculating...</span>
+                ) : hasOutput ? (
+                  outputFormatted
+                ) : (
+                  "—"
+                )}
+              </div>
+              <p className="text-[11px] text-neutral-400 mt-0.5">RUB Token</p>
+            </div>
           </div>
-          {amount && Number(amount) > 0 && (
-            <p className="text-xs text-neutral-400 mt-1">≈ ${usdValue.toFixed(2)} USD · Rate: $1 = 50 RUB</p>
+          {hasOutput && (
+            <p className="text-[11px] text-neutral-400 mt-2">
+              ≈${formatUSD(estimatedOutput, 50 / 3200)} USD · Rate varies by pool
+            </p>
           )}
         </div>
 
-        {/* Rate info */}
+        {/* Slippage settings */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowSettings(!showSettings)}
+            className="flex items-center gap-2 text-xs text-neutral-400 hover:text-neutral-600 transition-colors"
+          >
+            <Settings size={12} />
+            <span>
+              Slippage: {slippage}%
+            </span>
+          </button>
+          {showSettings && (
+            <div className="mt-2 flex items-center gap-2">
+              {[0.1, 0.5, 1.0].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setSlippage(s)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    slippage === s
+                      ? "bg-primary text-white"
+                      : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+                  }`}
+                >
+                  {s}%
+                </button>
+              ))}
+              <input
+                type="number"
+                min="0.1"
+                max="50"
+                step="0.1"
+                value={slippage}
+                onChange={(e) => setSlippage(Number(e.target.value))}
+                className="w-16 px-2 py-1.5 bg-neutral-50 border border-neutral-200 rounded-lg text-xs font-bold text-center focus:outline-none focus:border-primary"
+              />
+              <span className="text-xs text-neutral-400">%</span>
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
         <div className="flex items-start gap-2 p-3 bg-tertiary/5 rounded-xl">
           <Info size={14} className="text-tertiary shrink-0 mt-0.5" />
           <p className="text-xs text-neutral-500 leading-relaxed">
-            Bridge fee: <strong>0%</strong> during beta. Tokens are converted at the fixed rate of <strong>$1 = 50 RUB</strong>. Settlement time: ~30 seconds on Arbitrum Sepolia.
+            Powered by Uniswap V2 on Arbitrum Sepolia. Swap {inputToken === "ETH" ? "ETH (wrapped as WETH)" : "ARB"} for RUB tokens. 
+            A liquidity pair (WETH/RUB or ARB/RUB) must exist on the deployed Uniswap V2 factory.
           </p>
         </div>
 
-        <Button size="lg" fullWidth loading={loading} icon={<ArrowLeftRight size={16} />} onClick={handleBridge}>
-          Bridge to RUB
+        {/* Swap / Approve button */}
+        <Button
+          size="lg"
+          fullWidth
+          loading={isLoading}
+          disabled={!hasInput || !hasOutput || isLoading}
+          icon={<ArrowLeftRight size={16} />}
+          onClick={handleSwap}
+        >
+          {needsApproval
+            ? `Approve ${inputToken}`
+            : isQuoting
+              ? "Fetching Quote..."
+              : isSwapping
+                ? "Swapping..."
+                : `Swap ${inputToken} for RUB`}
         </Button>
+
+        {/* View on explorer */}
+        {isSwapping && swapTxHash && (
+          <a
+            href={`https://sepolia.arbiscan.io/tx/${swapTxHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-1 text-xs text-primary hover:underline"
+          >
+            View on Arbiscan <ExternalLink size={10} />
+          </a>
+        )}
       </div>
     </Modal>
   );
+}
+
+function parseEther(value: string): bigint {
+  if (!value || Number(value) <= 0) return 0n;
+  const parts = value.split(".");
+  const intPart = parts[0] || "0";
+  const fracPart = (parts[1] || "").padEnd(18, "0").slice(0, 18);
+  return BigInt(intPart) * BigInt(10 ** 18) + BigInt(fracPart);
 }

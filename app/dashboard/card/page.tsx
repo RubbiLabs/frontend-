@@ -94,7 +94,7 @@ export default function CardPage() {
             <div className="flex items-start justify-between mb-8">
               <div>
                 <p className="text-[11px] font-bold uppercase tracking-[0.32em] text-white/55">Rubbi Virtual Card</p>
-                <p className="text-xs text-white/55 mt-2">{virtualCardData.network}</p>
+                {/* <p className="text-xs text-white/55 mt-2">{virtualCardData.network}</p> */}
               </div>
               <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.28em] ${virtualCardData.isActive ? "bg-white/14 text-white" : "bg-red-500/20 text-red-100 border border-red-200/20"}`}>
                 {virtualCardData.isActive ? "Active" : "Inactive"}
@@ -183,7 +183,7 @@ export default function CardPage() {
                 <thead className="bg-neutral-50 border-b border-neutral-100">
                   <tr>
                     {["Subscription", "Plan", "Status", "Next Payment", "Monthly Fee", "Stream ID"].map((heading) => (
-                      <th key={heading} className="px-6 py-3 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                      <th key={heading} className="px-6 py-3 text-[11px] font-semibold uppercase tracking-widest text-primary-500">
                         {heading}
                       </th>
                     ))}

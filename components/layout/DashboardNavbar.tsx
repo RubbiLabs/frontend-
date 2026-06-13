@@ -51,7 +51,7 @@ export default function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
           <div className="hidden lg:flex items-center gap-2">
             {/* <span className="font-bold text-primary text-base">Rubbi</span>
             <span className="text-neutral-300">|</span> */}
-            <span className="text-sm text-neutral-500 font-medium">{activeLabel}</span>
+            {/* <span className="text-sm text-primary-400 font-bold">{activeLabel}</span> */}
           </div>
         </div>
 

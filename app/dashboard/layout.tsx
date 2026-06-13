@@ -78,7 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 onClick={() => { setBridgeOpen(true); setSidebarOpen(false); }}
                 className="w-full bg-primary text-white rounded-xl py-3 text-[11px] font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#1B4562] transition-colors"
               >
-                <ArrowLeftRight size={14} /> Bridge Assets
+                <ArrowLeftRight size={14} /> Swap Assets
               </button>
             </div>
           </aside>

@@ -104,7 +104,7 @@ export default function ServicesSection() {
             </h2>
             <p className="text-neutral-500 leading-relaxed text-[15px]">
               Rubbi isn't just a dApp; it's a digital institution. By leveraging
-              Monad's high-throughput architecture, we provide a tactile ledger
+              Arbitrum's high-throughput architecture, we provide a tactile ledger
               experience that automates complex financial workflows without
               compromising on decentralisation.
             </p>
@@ -119,13 +119,13 @@ export default function ServicesSection() {
               },
               {
                 icon: <Calendar size={18} className="text-tertiary" />,
-                title: "Monad Powered",
+                title: "Arbitrum Powered",
                 desc: "10,000+ TPS for near-instant transactions and account updates.",
               },
               {
                 icon: <DollarSign size={18} className="text-secondary" />,
                 title: "Unified Wallet",
-                desc: "Your Rubbi identity works across every app in the Monad ecosystem.",
+                desc: "Your Rubbi identity works across every app in the Arbitrum ecosystem.",
               },
             ].map((f) => (
               <div

@@ -87,7 +87,7 @@ function normalizeVirtualCardData(raw: Partial<VirtualCardData> | null | undefin
     expiry,
     cvv,
     network:
-      typeof raw.network === "string" && raw.network.trim() ? raw.network.trim() : "MONAD L1",
+      typeof raw.network === "string" && raw.network.trim() ? raw.network.trim() : "Arbitrum Sepolia",
     isActive: raw.isActive !== false,
   };
 }

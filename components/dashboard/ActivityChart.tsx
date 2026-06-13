@@ -12,10 +12,11 @@ import {
 
 const chartData = [
   { day: "MON 01", streams: 4200, txs: 18 },
-  { day: "MON 08", streams: 8100, txs: 34 },
-  { day: "MON 15", streams: 28200, txs: 112 },
-  { day: "MON 22", streams: 12400, txs: 56 },
-  { day: "MON 30", streams: 15800, txs: 73 },
+  { day: "TEU 08", streams: 8100, txs: 34 },
+  { day: "WED 15", streams: 28200, txs: 112 },
+  { day: "THU 22", streams: 12400, txs: 56 },
+  { day: "FRI 28", streams: 15800, txs: 73 },
+  { day: "SAT 31", streams: 18800, txs: 73 },
 ];
 
 type ChartMode = "streams" | "txs";

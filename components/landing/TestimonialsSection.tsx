@@ -74,7 +74,7 @@ export default function TestimonialsSection() {
                 Voices from the Archive
               </div>
               <h2 className="text-3xl lg:text-4xl font-extrabold text-neutral-900 leading-tight mb-4">
-                Early adopters on the Monad ecosystem trust Rubbi.
+                Early adopters on the Arbitrum ecosystem trust Rubbi.
               </h2>
               <p className="text-sm text-neutral-500 leading-relaxed">
                 Real teams. Real automation. Real capital flows.
