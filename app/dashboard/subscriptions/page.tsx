@@ -232,7 +232,7 @@ export default function SubscriptionsPage() {
                       <p className="font-semibold text-neutral-700 font-mono text-xs">{sub.address?.slice(0, 10)}...</p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
                     <Button
                       size="sm"
                       variant="outlined"
@@ -279,7 +279,7 @@ export default function SubscriptionsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {filteredCatalog.map((item) => {
             // Check if this catalog item has a matching on-chain plan
             const onChainPlan = onChainPlans.find((p: any) => p.name === item.name);
@@ -296,8 +296,8 @@ export default function SubscriptionsPage() {
                   {item.fee.toFixed(2)} RUB / {item.period}
                 </p>
                 {!planExists ? (
-                  <Button size="sm" fullWidth variant="ghost" disabled>
-                    Not Available
+                  <Button size="sm" fullWidth variant="ghost" disabled className="!text-neutral-400">
+                    Coming Soon
                   </Button>
                 ) : isSubscribed ? (
                   <Button size="sm" fullWidth variant="ghost" disabled>

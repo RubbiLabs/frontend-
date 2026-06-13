@@ -95,7 +95,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <footer className="bg-neutral-50 border-t border-neutral-200 px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="text-xs text-neutral-400">
-            © {new Date().getFullYear()} Rubbi Protocol — The Architectural Archive of Λеb3
+            © {new Date().getFullYear()} Rubbi Protocol — The Architectural Archive of DeFi
           </p>
           <div className="flex gap-4 text-xs text-neutral-400">
             <a href="#" className="hover:text-primary transition-colors">Docs</a>

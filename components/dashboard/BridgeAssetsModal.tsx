@@ -109,7 +109,7 @@ export default function BridgeAssetsModal({ open, onClose }: Props) {
       onClose={onClose}
       title="Swap to RUB"
       subtitle="Convert tokens to RUB via Uniswap V2"
-      size="sm"
+      size="md"
     >
       <div className="space-y-4">
         {/* From token + amount */}
@@ -189,7 +189,7 @@ export default function BridgeAssetsModal({ open, onClose }: Props) {
               placeholder="0.00"
               value={inputAmount}
               onChange={(e) => setInputAmount(e.target.value)}
-              className="flex-1 text-right text-2xl font-extrabold bg-transparent focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="flex-1 text-right text-xl sm:text-2xl font-extrabold bg-transparent focus:outline-none min-w-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
           </div>
           <div className="flex items-center justify-between mt-2">

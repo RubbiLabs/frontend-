@@ -97,7 +97,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl lg:text-3xl font-extrabold text-neutral-900">Overview</h1>
           <p className="text-sm text-neutral-500 mt-1">
-            Real-time surveillance of your liquidity nodes and automated salary streams across the Arbitrum ledger.
+            Real-time surveillance of your liquidity nodes and automated salary streams on the Arbitrum ledger.
           </p>
         </div>
         <div className="flex items-center gap-2 bg-white border border-neutral-200 rounded-xl px-3 py-2">
@@ -106,7 +106,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatsCard
           label="RUBBI Balance"
           value={loading ? "—" : Number(totalBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -133,7 +133,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <ActivityChart className="lg:col-span-2" />
 
         <div className="bg-white rounded-2xl p-6 border border-neutral-100">

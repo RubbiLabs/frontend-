@@ -37,21 +37,21 @@ export default function AboutPage() {
       <LandingNavbar />
 
       {/* HERO */}
-      <section className="relative pt-32 pb-24 overflow-hidden">
+      <section className="relative pt-32 pb-16 lg:pb-24 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] rounded-full bg-primary/4 blur-3xl" />
         </div>
         <div className="px-6 lg:px-36">
-          <div className="grid lg:grid-cols-2 gap-16 items-center mt-28">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center mt-20 lg:mt-28">
             <div>
-              <div className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-4 animate-fadeIn">Foundations of Financial Autonomy</div>
-              <h1 className="text-5xl lg:text-6xl font-extrabold text-neutral-900 leading-[1.05] tracking-tight mb-6 animate-slideUp">
+              <div className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-4 animate-fadeIn">Building Foundations for Financial Autonomy</div>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-neutral-900 leading-[1.05] tracking-tight mb-6 animate-slideUp">
                 The Architectural Archive for
                 <br />
-                <span className="text-primary">Automated Assets.</span>
+                <span className="text-primary">Decentralized Finance.</span>
               </h1>
               <p className="text-neutral-500 leading-relaxed">
-                In an era defined by autonomous code and fluid liquidity, Rubbi serves as the limestone foundation. We build the tactile ledger for a decentralized future.
+                In an era defined by autonomous code and fluid liquidity, Rubbi serves as the limestone foundation for decentralized finance. We build the tactile ledger for a future where your assets move with architectural precision.
               </p>
             </div>
             {/* Abstract 3D shape placeholder */}
@@ -71,14 +71,14 @@ export default function AboutPage() {
       {/* MISSION */}
       <section className="py-24 bg-white">
         <div className="px-6 lg:px-36">
-          <div className="grid lg:grid-cols-2 gap-16 items-start">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
             <FadeIn>
-              <h2 className="text-3xl lg:text-4xl font-extrabold text-neutral-900 mb-6">A Mission of Permanence</h2>
+              <h2 className="text-3xl sm:text-4xl lg:text-4xl font-extrabold text-neutral-900 mb-6">A Mission of Permanence</h2>
               <p className="text-neutral-500 leading-relaxed mb-6">
-                The digital world moves fast, often sacrificing stability for speed. Rubbi was conceived to bridge this gap, creating a financial interface that feels as substantial and permanent as a physical bank vault, while harnessing the infinite scalability of automated financial streams.
+                The digital world moves fast, often sacrificing stability for speed. Rubbi was conceived to bridge this gap — creating a financial interface that feels as substantial and permanent as a physical bank vault, while harnessing the infinite scalability of Arbitrum's L2 infrastructure.
               </p>
               <p className="text-neutral-500 leading-relaxed mb-8">
-                We believe that autonomy requires structure. Our "Tactile Ledger" philosophy ensures that every transaction, every stream, and every automated event is recorded with editorial clarity and structural integrity.
+                We believe that autonomy requires structure. Our "Tactile Ledger" philosophy ensures that every transaction, every stream, and every automated event is recorded with editorial clarity and structural integrity on-chain.
               </p>
               <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary border-b-2 border-primary pb-1">
                 Our Core Thesis
@@ -116,7 +116,7 @@ export default function AboutPage() {
       {/* STATS */}
       <section className="py-20 bg-primary">
         <div className="px-6 lg:px-36">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-10">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-10">
             {[
               { val: "$0.00B", label: "Initial Capital Secured" },
               { val: "100%", label: "On-Chain Transparency" },
@@ -138,10 +138,10 @@ export default function AboutPage() {
           <FadeIn>
             <h2 className="text-3xl lg:text-4xl font-extrabold text-neutral-900 mb-6">A New Era of Finance</h2>
             <p className="text-neutral-500 leading-relaxed mb-6">
-              Rubbi isn't just a tool; it's a statement about the future of digital wealth. As we move away from manual intervention and toward a world of autonomous financial entities, we need a common language of trust.
+              Rubbi isn't just a tool; it's a statement about the future of digital wealth. As we move away from manual intervention and toward a world of autonomous financial entities, we need a common language of trust built on-chain.
             </p>
             <p className="text-neutral-500 leading-relaxed">
-              The Tactile Ledger is that language. It is the archive where your financial future is not just recorded, but built — layer by layer, block by block.
+              The Tactile Ledger is that language. It is the archive where your financial future is not just recorded, but constructed — layer by layer, block by block, on Arbitrum.
             </p>
           </FadeIn>
         </div>

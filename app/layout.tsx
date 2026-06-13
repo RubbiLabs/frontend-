@@ -3,8 +3,8 @@ import "./globals.css";
 import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "Rubbi — Decentralized Financial Automation",
-  description: "A decentralised financial automation platform on Arbitrum.",
+  title: "Rubbi — Decentralized Financial Automation on Arbitrum",
+  description: "Automate subscriptions, stream salaries, and manage digital assets on Arbitrum from a single, secure ledger.",
 };
 
 export default function RootLayout({

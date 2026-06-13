@@ -25,8 +25,12 @@ export interface CatalogItem {
 }
 
 export const subscriptionCatalog: CatalogItem[] = [
+  { name: "Netflix Premium", fee: 15.99, period: "MONTH", color: "bg-red-600", category: "entertainment", logo: "/subscriptions/netflix.svg", plan: "Premium" },
+  { name: "Spotify Family", fee: 9.99, period: "MONTH", color: "bg-green-600", category: "entertainment", logo: "/subscriptions/spotify.svg", plan: "Family" },
   { name: "Disney+ Standard", fee: 7.99, period: "MONTH", color: "bg-blue-600", category: "entertainment", logo: "/subscriptions/disney.svg", plan: "Standard" },
   { name: "YouTube Premium", fee: 11.99, period: "MONTH", color: "bg-red-500", category: "entertainment", logo: "/subscriptions/youtube.svg", plan: "Premium" },
+  { name: "DSTV Premium Plus", fee: 45.0, period: "MONTH", color: "bg-blue-800", category: "entertainment", logo: "/subscriptions/dstv.svg", plan: "Premium Plus" },
+  { name: "AWS Cloud Instance", fee: 71.52, period: "MONTH", color: "bg-orange-500", category: "cloud", logo: "/subscriptions/aws.svg", plan: "Cloud Instance" },
   { name: "Creative Cloud", fee: 52.99, period: "MONTH", color: "bg-red-700", category: "productivity", logo: "/subscriptions/creative-cloud.svg", plan: "All Apps" },
   { name: "Figma Professional", fee: 15.0, period: "MONTH", color: "bg-purple-600", category: "productivity", logo: "/subscriptions/figma.svg", plan: "Professional" },
   { name: "GitHub Pro", fee: 4.0, period: "MONTH", color: "bg-neutral-800", category: "cloud", logo: "/subscriptions/github.svg", plan: "Pro" },

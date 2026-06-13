@@ -38,7 +38,7 @@ export default function LandingFooter() {
                       </Link>
 
             <p className="text-sm text-neutral-500 leading-relaxed max-w-xs">
-              Building the architectural foundations for a decentralized, autonomous financial era.
+              Building the architectural foundations for a decentralized, autonomous financial era on Arbitrum.
               Permanent. Trustworthy. Tactile.
             </p>
             <div className="flex items-center gap-2 mt-6">

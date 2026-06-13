@@ -47,7 +47,7 @@ export default function HeroSection() {
 
           {/* Headline */}
           <h1
-            className="text-5xl lg:text-6xl xl:text-[68px] font-extrabold text-neutral-900 leading-[1.04] tracking-tight mb-6 animate-slideUp"
+            className="text-4xl sm:text-5xl lg:text-6xl xl:text-[68px] font-extrabold text-neutral-900 leading-[1.04] tracking-tight mb-6 animate-slideUp"
           >
             Decentralized
             <br />
@@ -56,9 +56,9 @@ export default function HeroSection() {
 
           {/* Subheadline */}
           <p className="text-base lg:text-lg text-neutral-500 leading-relaxed max-w-2xl mb-10">
-            A heavy-duty ledger protocol for the Arbitrum Network. Secure
-            your streams, automate your life, and archive your wealth with
-            permanent precision.
+            Automate subscriptions, stream salaries, and manage digital assets on
+            Arbitrum — all from a single, secure ledger. Built for permanence,
+            designed for precision.
           </p>
 
           {/* CTA */}

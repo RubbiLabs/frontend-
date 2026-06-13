@@ -86,15 +86,15 @@ export default function ServicesPage() {
 						<div className='text-xs font-bold uppercase tracking-widest text-neutral-400 mb-4 animate-fadeIn'>
 							Our Infrastructure
 						</div>
-						<h1 className='text-5xl lg:text-6xl font-extrabold text-neutral-900 leading-[1.05] mb-6 animate-slideUp'>
+						<h1 className='text-4xl sm:text-5xl lg:text-6xl font-extrabold text-neutral-900 leading-[1.05] mb-6 animate-slideUp'>
 							Decentralized Financial
 							<br />
 							<span className='text-primary'>Automation.</span>
 						</h1>
 						<p className='text-neutral-500 leading-relaxed'>
 							Rubbi architects the next generation of capital flow. We replace
-							manual friction with automated smart-contract logic, ensuring your
-							assets move with architectural precision.
+							manual friction with automated smart-contract logic on Arbitrum,
+							ensuring your assets move with architectural precision.
 						</p>
 					</div>
 				</div>
@@ -103,7 +103,7 @@ export default function ServicesPage() {
 			{/* STREAMING SUBSCRIPTIONS */}
 			<section className='py-20 bg-white'>
 				<div className='px-6 lg:px-36'>
-					<div className='grid lg:grid-cols-2 gap-16 items-center'>
+					<div className='grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center'>
 						<FadeIn>
 							<div className='w-12 h-12 bg-primary/8 rounded-xl flex items-center justify-center mb-6'>
 								<Calendar
@@ -116,7 +116,7 @@ export default function ServicesPage() {
 							</h2>
 							<p className='text-neutral-500 leading-relaxed mb-6'>
 								Continuous value transfer protocols for modern services. No more
-								billing cycles, just per-second settlement that mirrors
+								billing cycles — just per-second settlement on Arbitrum that mirrors
 								real-time consumption.
 							</p>
 							<div className='flex flex-wrap gap-2 mb-8'>
@@ -194,9 +194,9 @@ export default function ServicesPage() {
 			{/* ON-CHAIN IDENTITY */}
 			<section className='py-20 bg-primary text-white'>
 				<div className='px-6 lg:px-36'>
-					<div className='grid lg:grid-cols-2 gap-16 items-center'>
+					<div className='grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center'>
 						<FadeIn delay={150}>
-							<div className='bg-white/5 rounded-2xl p-8 border border-white/10'>
+							<div className='bg-white/5 rounded-2xl p-6 sm:p-8 border border-white/10'>
 								<div className='bg-white/10 rounded-xl p-5 mb-4'>
 									<p className='text-xs text-white/50 mb-1'>
 										RUBBI VIRTUAL CARD
@@ -234,8 +234,8 @@ export default function ServicesPage() {
 							</h2>
 							<p className='text-white/70 leading-relaxed mb-6'>
 								Your reputation is your most valuable asset. Aggregate your
-								cross-chain activity into a single, verifiable ledger. Your
-								Rubbi identity is your permanent on-chain fingerprint.
+								cross-chain activity into a single, verifiable on-chain ledger. Your
+								Rubbi identity is your permanent digital fingerprint on Arbitrum.
 							</p>
 							<Link
 								href='#'
@@ -250,7 +250,7 @@ export default function ServicesPage() {
 			{/* SALARY STREAMING */}
 			<section className='py-20 bg-white'>
 				<div className='px-6 lg:px-36'>
-					<div className='grid lg:grid-cols-2 gap-16 items-center'>
+					<div className='grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center'>
 						<FadeIn>
 							<div className='w-12 h-12 bg-primary/8 rounded-xl flex items-center justify-center mb-6'>
 								<DollarSign
@@ -262,12 +262,12 @@ export default function ServicesPage() {
 								Salary Streaming
 							</h2>
 							<p className='text-neutral-500 leading-relaxed mb-6'>
-								Empower your workforce with immediate liquidity. Salary
+								Empower your workforce with immediate liquidity on-chain. Salary
 								Streaming enables employees to access their earnings as they
-								accrue, eliminating the bi-weekly wait and fostering financial
-								sovereignty.
+								accrue on Arbitrum, eliminating the bi-weekly wait and fostering
+								financial sovereignty.
 							</p>
-							<div className='grid grid-cols-3 gap-6 mb-8'>
+							<div className='grid grid-cols-3 gap-4 sm:gap-6 mb-8'>
 								<div>
 									<p className='text-2xl font-extrabold text-primary'>0%</p>
 									<p className='text-xs text-neutral-400 uppercase tracking-wider mt-1'>
@@ -318,8 +318,8 @@ export default function ServicesPage() {
 							Ready to Architect Your Capital?
 						</h2>
 						<p className='text-neutral-500 mb-8'>
-							Join the ecosystem of thousands who have automated their financial
-							future through Rubbi's decentralized ledger.
+							Join builders and teams who have automated their financial
+							future through Rubbi's on-chain ledger on Arbitrum.
 						</p>
 						<div className='flex flex-wrap justify-center gap-3'>
 							<Button

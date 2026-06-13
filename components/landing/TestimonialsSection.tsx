@@ -68,16 +68,16 @@ export default function TestimonialsSection() {
       {/* ── Testimonials ── */}
       <section className="py-24 bg-neutral-50">
         <div className="px-6 lg:px-36">
-          <div className="grid lg:grid-cols-3 gap-10 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10 items-start">
             <FadeIn>
               <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-3">
                 Voices from the Archive
               </div>
               <h2 className="text-3xl lg:text-4xl font-extrabold text-neutral-900 leading-tight mb-4">
-                Early adopters on the Arbitrum ecosystem trust Rubbi.
+                Teams building on Arbitrum trust Rubbi to automate their finances.
               </h2>
               <p className="text-sm text-neutral-500 leading-relaxed">
-                Real teams. Real automation. Real capital flows.
+                Real teams. Real automation. Real capital flows on-chain.
               </p>
             </FadeIn>
 
@@ -117,19 +117,19 @@ export default function TestimonialsSection() {
 
       {/* ── Contact form ── */}
       <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 grid lg:grid-cols-2 gap-16 items-start">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-start">
           <FadeIn>
             <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-3">
               Inquiries
             </div>
-            <h2 className="text-3xl lg:text-4xl font-extrabold text-neutral-900 mb-6">
+              <h2 className="text-3xl lg:text-4xl font-extrabold text-neutral-900 mb-6">
               Ready to Automate
               <br />
               Your Ledger?
             </h2>
             <p className="text-neutral-500 text-sm leading-relaxed mb-8">
-              Get in touch with our integration team to see how Rubbi can
-              streamline your organisation's financial operations.
+              Get in touch with our integration team to explore how Rubbi can
+              streamline your financial operations on Arbitrum.
             </p>
             <div className="space-y-5">
               <div className="flex items-center gap-3">
