@@ -16,6 +16,7 @@ import { useNetworkSwitch } from "@/hooks/useNetworkSwitch";
 import { useModalContract } from "@/hooks/useContracts";
 import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
 import RubbiTokenABI from "@/Abis/RubbiToken.json";
+import ERC20ABI from "@/Abis/ERC20.json";
 
 const RUB_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_RUBBI_TOKEN_ADDRESS as `0x${string}`;
 
@@ -63,6 +64,25 @@ export default function WalletPage() {
   const [depositAmount, setDepositAmount] = useState("");
   const [depositLoading, setDepositLoading] = useState(false);
   const [activity, setActivity] = useState<any[]>([]);
+
+  // Read on-chain RUB token balance
+  const { data: onChainRubBalance, refetch: refetchRubBalance } = useReadContract({
+    address: RUB_TOKEN_ADDRESS,
+    abi: ERC20ABI.abi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && !!RUB_TOKEN_ADDRESS && wagmiConnected },
+  });
+
+  // Sync on-chain balance with context whenever it changes
+  useEffect(() => {
+    if (onChainRubBalance !== undefined) {
+      const onChainBal = (Number(onChainRubBalance) / 1e18).toFixed(2);
+      if (Number(onChainBal) > 0) {
+        setRubBalance(onChainBal);
+      }
+    }
+  }, [onChainRubBalance, setRubBalance]);
 
   // Faucet claim: call RubbiToken.claimFaucet()
   const { writeContract: writeClaimFaucet, data: claimTxHash, isPending: isClaimPending } = useWriteContract();
@@ -140,6 +160,8 @@ export default function WalletPage() {
         `${Math.max(0, CLAIM_LIMIT - newCount)} lifetime claim${Math.max(0, CLAIM_LIMIT - newCount) === 1 ? "" : "s"} remaining.`
       );
       setClaimLoading(false);
+      // Refetch on-chain balance to stay in sync
+      setTimeout(() => refetchRubBalance(), 2000);
     }
   }, [claimSuccess]);
 
@@ -225,7 +247,7 @@ export default function WalletPage() {
 
             <div className="flex flex-wrap gap-3 mt-6">
               <Button size="md" onClick={() => setDepositModal(true)}>Deposit to Contract</Button>
-              <Button size="md" variant="outlined" onClick={() => window.location.href = "/dashboard/card"}>
+              <Button size="md" variant="outlined" onClick={() => window.dispatchEvent(new CustomEvent("open-swap-modal"))}>
                 <ArrowLeftRight size={14} className="mr-1" /> Swap Tokens
               </Button>
             </div>
@@ -313,6 +335,34 @@ export default function WalletPage() {
               {address ? `${address.slice(0, 8)}...${address.slice(-6)}` : "Not connected"}
             </p>
           </div>
+
+          {RUB_TOKEN_ADDRESS && (
+            <div className="bg-primary/5 rounded-2xl p-5 border border-primary/10">
+              <p className="text-xs font-bold uppercase tracking-widest text-primary/60 mb-3">Import RUB Token</p>
+              <p className="text-xs text-neutral-500 leading-relaxed mb-3">
+                Add the RUB token to your wallet to see your balance. Click below to copy the contract address, then import it in MetaMask.
+              </p>
+              <p className="font-mono text-[11px] text-neutral-600 bg-white rounded-lg px-3 py-2 border border-neutral-100 break-all mb-3">
+                {RUB_TOKEN_ADDRESS}
+              </p>
+              <Button
+                size="sm"
+                fullWidth
+                variant="outlined"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(RUB_TOKEN_ADDRESS);
+                    success("Copied!", "RUB token address copied to clipboard.");
+                  } catch {
+                    info("Token Address", RUB_TOKEN_ADDRESS);
+                  }
+                }}
+              >
+                Copy Contract Address
+              </Button>
+              <p className="text-[10px] text-neutral-400 mt-2 text-center">Network: Arbitrum Sepolia</p>
+            </div>
+          )}
         </div>
       </div>
 

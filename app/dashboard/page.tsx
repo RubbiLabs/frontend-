@@ -1,17 +1,26 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { TrendingUp, RefreshCw, ArrowUpRight, Calendar, Loader2 } from "lucide-react";
+import { TrendingUp, RefreshCw, ArrowUpRight, Calendar } from "lucide-react";
 import { useAccount } from "wagmi";
 import { useSubscription } from "@/hooks/useContracts";
 import { useSalaryStreaming } from "@/hooks/useSalaryStreaming";
+import { useWallet } from "../../context/WalletContext";
 import StatsCard from "../../components/dashboard/StatsCard";
 import ActivityChart from "../../components/dashboard/ActivityChart";
-import RubbiTokenABI from "@/Abis/RubbiToken.json";
-import ModalABI from "@/Abis/Modal.json";
 
-const rubbiTokenAddress = process.env.NEXT_PUBLIC_RUBBI_TOKEN_ADDRESS as `0x${string}`;
-const modalContractAddress = process.env.NEXT_PUBLIC_MODAL_CONTRACT_ADDRESS as `0x${string}`;
 const ARBITRUM_SEPOLIA_RPC = "https://sepolia-rollup.arbitrum.io/rpc";
+const RUBBI_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_RUBBI_TOKEN_ADDRESS as `0x${string}`;
+const MODAL_CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_MODAL_CONTRACT_ADDRESS as `0x${string}`;
+
+function safeHexToNumber(hex: unknown, decimals = 18): number {
+  if (!hex || typeof hex !== "string" || hex === "0x" || hex === "0x0") return 0;
+  try {
+    const parsed = parseInt(hex, 16);
+    return isNaN(parsed) ? 0 : parsed / 10 ** decimals;
+  } catch {
+    return 0;
+  }
+}
 
 const statusColors: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
@@ -28,6 +37,7 @@ const ActivityIcon = ({ type }: { type: string }) => {
 
 export default function DashboardPage() {
   const { address, isConnected } = useAccount();
+  const { rubBalance: contextBalance } = useWallet();
   const { userSubscriptions } = useSubscription();
   const { dailyStreams, monthlyStreams } = useSalaryStreaming();
   const [rubbiBalance, setRubbiBalance] = useState<string>("0");
@@ -42,34 +52,35 @@ export default function DashboardPage() {
       }
 
       try {
-        const [rubbiRes, modalRes] = await Promise.all([
-          fetch(ARBITRUM_SEPOLIA_RPC, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              jsonrpc: "2.0",
-              method: "eth_call",
-              params: [{ to: rubbiTokenAddress, data: `0x70a08231000000000000000000000000${address.slice(2)}` }, "latest"],
-              id: 1,
-            }),
-          }),
-          fetch(ARBITRUM_SEPOLIA_RPC, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              jsonrpc: "2.0",
-              method: "eth_call",
-              params: [{ to: modalContractAddress, data: `0xf8b2cb4f000000000000000000000000${address.slice(2)}` }, "latest"],
-              id: 1,
-            }),
-          }),
+        const rpcBody = (to: string, data: string) => ({
+          jsonrpc: "2.0",
+          method: "eth_call",
+          params: [{ to, data }, "latest"],
+          id: 1,
+        });
+
+        const results = await Promise.allSettled([
+          RUBBI_TOKEN_ADDRESS
+            ? fetch(ARBITRUM_SEPOLIA_RPC, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(rpcBody(RUBBI_TOKEN_ADDRESS, `0x70a08231000000000000000000000000${address.slice(2)}`)),
+              }).then((r) => r.json())
+            : Promise.resolve(null),
+          MODAL_CONTRACT_ADDRESS
+            ? fetch(ARBITRUM_SEPOLIA_RPC, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(rpcBody(MODAL_CONTRACT_ADDRESS, `0xf8b2cb4f000000000000000000000000${address.slice(2)}`)),
+              }).then((r) => r.json())
+            : Promise.resolve(null),
         ]);
 
-        const rubbiData = await rubbiRes.json();
-        const modalData = await modalRes.json();
+        const rubbiData = results[0].status === "fulfilled" ? results[0].value : null;
+        const modalData = results[1].status === "fulfilled" ? results[1].value : null;
 
-        const rubbiBal = rubbiData.result ? parseInt(rubbiData.result, 16) / 1e18 : 0;
-        const modalBal = modalData.result ? parseInt(modalData.result, 16) / 1e18 : 0;
+        const rubbiBal = safeHexToNumber(rubbiData?.result);
+        const modalBal = safeHexToNumber(modalData?.result);
 
         setRubbiBalance(rubbiBal.toFixed(2));
         setModalBalance(modalBal.toFixed(2));
@@ -82,7 +93,8 @@ export default function DashboardPage() {
     fetchBalances();
   }, [address, isConnected]);
 
-  const totalBalance = (Number(rubbiBalance) + Number(modalBalance)).toFixed(2);
+  const walletBal = Number(contextBalance) || Number(rubbiBalance) || 0;
+  const totalBalance = (walletBal + Number(modalBalance)).toFixed(2);
   const activeSubs = userSubscriptions.filter((s: any) => s.active).length;
   const totalStreams = dailyStreams.length + monthlyStreams.length;
 
@@ -109,8 +121,8 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatsCard
           label="RUBBI Balance"
-          value={loading ? "—" : Number(totalBalance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          sub={loading ? "Loading..." : `${Number(rubbiBalance)} in wallet, ${Number(modalBalance)} in contract`}
+          value={loading ? "—" : walletBal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          sub={loading ? "Loading..." : `${walletBal.toFixed(2)} in wallet, ${Number(modalBalance).toFixed(2)} in contract`}
           icon={<span className="text-primary text-[11px] font-extrabold">RUB</span>}
         />
         <StatsCard

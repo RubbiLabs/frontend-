@@ -20,6 +20,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   useEffect(() => {
+    const handleOpenSwap = () => setBridgeOpen(true);
+    window.addEventListener("open-swap-modal", handleOpenSwap);
+    return () => window.removeEventListener("open-swap-modal", handleOpenSwap);
+  }, []);
+
+  useEffect(() => {
     if (!isHydrated) return;
     if (!isConnected) router.replace("/");
   }, [isConnected, isHydrated, router]);

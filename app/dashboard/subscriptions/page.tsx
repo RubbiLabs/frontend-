@@ -68,6 +68,11 @@ export default function SubscriptionsPage() {
   const activeSubs = userSubs.filter((s: any) => s.active);
   const totalMonthly = activeSubs.reduce((acc: number, s: any) => acc + s.fee, 0);
 
+  // Case-insensitive plan matching helper
+  const findOnChainPlan = (itemName: string) => {
+    return onChainPlans.find((p: any) => p.name.toLowerCase() === itemName.toLowerCase());
+  };
+
   const focusActiveSubscriptions = () => {
     window.setTimeout(() => {
       activeSubscriptionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -281,8 +286,7 @@ export default function SubscriptionsPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {filteredCatalog.map((item) => {
-            // Check if this catalog item has a matching on-chain plan
-            const onChainPlan = onChainPlans.find((p: any) => p.name === item.name);
+            const onChainPlan = findOnChainPlan(item.name);
             const isSubscribed = userSubs.some((s: any) => s.planId === onChainPlan?.id && s.active);
             const planExists = !!onChainPlan;
 
