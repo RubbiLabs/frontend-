@@ -10,7 +10,7 @@ import {
 import { parseEther, parseUnits, maxUint256 } from "viem";
 import RouterABI from "@/Abis/UniswapV2Router02.json";
 import ERC20ABI from "@/Abis/ERC20.json";
-import { SWAP_TOKEN_ADDRESSES, type SwapToken } from "@/types";
+import type { SwapToken } from "@/types";
 import { useToast } from "@/context/ToastContext";
 
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
@@ -18,6 +18,10 @@ const UNISWAP_V2_ROUTER =
   process.env.NEXT_PUBLIC_UNISWAP_V2_ROUTER as `0x${string}`;
 const RUB_TOKEN_ADDRESS =
   process.env.NEXT_PUBLIC_RUBBI_TOKEN_ADDRESS as `0x${string}`;
+const WETH_ADDRESS =
+  process.env.NEXT_PUBLIC_WETH_ADDRESS as `0x${string}`;
+const ARB_TOKEN_ADDRESS =
+  process.env.NEXT_PUBLIC_ARB_TOKEN_ADDRESS as `0x${string}`;
 
 function toDeadline(seconds: number): bigint {
   return BigInt(Math.floor(Date.now() / 1000) + seconds);
@@ -32,19 +36,14 @@ export function useSwap() {
   const [inputAmount, setInputAmount] = useState("");
   const [slippage, setSlippage] = useState(0.5); // percent
 
-  // Get WETH address for the current chain
-  const wethAddress = UNISWAP_V2_ROUTER
-    ? (SWAP_TOKEN_ADDRESSES.ETH[chainId] as `0x${string}` | undefined)
-    : undefined;
+  // Get WETH address from env
+  const wethAddress = WETH_ADDRESS || undefined;
 
   // For ETH swaps, use native ETH balance
   const { data: ethBalance } = useBalance({ address });
 
   // For ARB swaps, read ERC20 balance
-  const arbAddress =
-    chainId === ARBITRUM_SEPOLIA_CHAIN_ID
-      ? (SWAP_TOKEN_ADDRESSES.ARB[ARBITRUM_SEPOLIA_CHAIN_ID] as `0x${string}`)
-      : undefined;
+  const arbAddress = ARB_TOKEN_ADDRESS || undefined;
 
   const { data: arbBalance } = useReadContract({
     address: arbAddress,

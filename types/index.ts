@@ -55,11 +55,10 @@ export type SwapToken = "ETH" | "ARB";
 
 export const SWAP_TOKEN_ADDRESSES: Record<SwapToken, Record<number, `0x${string}`>> = {
   ETH: {
-    // ETH uses WETH address for Uniswap pairs
-    421614: "0x980B62Da83eFf3D4576C647993bE3e48d8889910", // WETH on Arbitrum Sepolia
+    421614: (process.env.NEXT_PUBLIC_WETH_ADDRESS as `0x${string}`) || "0x0000000000000000000000000000000000000000",
   },
   ARB: {
-    421614: "0xe5914C2E0A726242a0F72c2850E84a98D4D544c6", // ARB on Arbitrum Sepolia
+    421614: (process.env.NEXT_PUBLIC_ARB_TOKEN_ADDRESS as `0x${string}`) || "0x0000000000000000000000000000000000000000",
   },
 };
 
