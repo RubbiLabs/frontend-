@@ -5,9 +5,9 @@ import { ChevronLeft, ChevronRight, CreditCard, RefreshCw, ShieldAlert, ShieldCh
 import Button from "@/components/ui/Button";
 import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
-import { defaultSubscriptions, type SubscriptionPlan } from "@/lib/subscriptions";
+import { subscriptionChannels, type CatalogChannel } from "@/lib/subscriptions";
 
-const cardStatusBadge: Record<SubscriptionPlan["status"], string> = {
+const cardStatusBadge: Record<string, string> = {
   active: "bg-green-100 text-green-700",
   paused: "bg-amber-100 text-amber-700",
   inactive: "bg-neutral-100 text-neutral-600",
@@ -36,8 +36,15 @@ export default function CardPage() {
 
   const cardSubscriptions = useMemo(() => {
     if (!virtualCardData) return [];
-    return defaultSubscriptions.map((subscription) => ({
-      ...subscription,
+    return subscriptionChannels.map((channel, idx) => ({
+      id: idx,
+      name: channel.name,
+      fee: channel.tiers[0]?.priceUsd || 0,
+      status: "inactive" as const,
+      logo: channel.logo,
+      plan: channel.tiers[0]?.name || "Basic",
+      nextPayment: "N/A",
+      streamId: `--`,
       cardLastFour: virtualCardData.lastFour,
     }));
   }, [virtualCardData]);

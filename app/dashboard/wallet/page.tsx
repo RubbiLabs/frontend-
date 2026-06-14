@@ -14,11 +14,15 @@ import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
 import { useNetworkSwitch } from "@/hooks/useNetworkSwitch";
 import { useModalContract } from "@/hooks/useContracts";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
+import { useContractWrite } from "@/hooks/useContractWrite";
+import { useZeroDev } from "@/context/ZeroDevContext";
+import { useAccount, useReadContract } from "wagmi";
 import RubbiTokenABI from "@/Abis/RubbiToken.json";
 import ERC20ABI from "@/Abis/ERC20.json";
+import { api } from "@/lib/api";
 
 const RUB_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_RUBBI_TOKEN_ADDRESS as `0x${string}`;
+const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 
 function ActivityIcon({ type }: { type: string }) {
   if (type === "faucet") {
@@ -28,7 +32,6 @@ function ActivityIcon({ type }: { type: string }) {
       </div>
     );
   }
-
   if (type === "deposit") {
     return (
       <div className="w-10 h-10 bg-neutral-100 rounded-xl flex items-center justify-center">
@@ -36,7 +39,6 @@ function ActivityIcon({ type }: { type: string }) {
       </div>
     );
   }
-
   if (type === "stream") {
     return (
       <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
@@ -44,7 +46,6 @@ function ActivityIcon({ type }: { type: string }) {
       </div>
     );
   }
-
   return (
     <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
       <RefreshCw size={16} className="text-amber-600" />
@@ -58,6 +59,8 @@ export default function WalletPage() {
   const { isCorrectNetwork, isConnected, switchToArbitrum } = useNetworkSwitch();
   const { balance: modalBalance, depositFunds, refetchBalance } = useModalContract();
   const { isConnected: wagmiConnected } = useAccount();
+  const { execute, isWriting } = useContractWrite();
+  const { isReady: isZeroDevReady, isLoading: isZeroDevLoading, error: zeroDevError, smartAccountAddress } = useZeroDev();
 
   const [claimLoading, setClaimLoading] = useState(false);
   const [depositModal, setDepositModal] = useState(false);
@@ -65,7 +68,6 @@ export default function WalletPage() {
   const [depositLoading, setDepositLoading] = useState(false);
   const [activity, setActivity] = useState<any[]>([]);
 
-  // Read on-chain RUB token balance
   const { data: onChainRubBalance, refetch: refetchRubBalance } = useReadContract({
     address: RUB_TOKEN_ADDRESS,
     abi: ERC20ABI.abi,
@@ -74,7 +76,6 @@ export default function WalletPage() {
     query: { enabled: !!address && !!RUB_TOKEN_ADDRESS && wagmiConnected },
   });
 
-  // Sync on-chain balance with context whenever it changes
   useEffect(() => {
     if (onChainRubBalance !== undefined) {
       const onChainBal = (Number(onChainRubBalance) / 1e18).toFixed(2);
@@ -84,11 +85,6 @@ export default function WalletPage() {
     }
   }, [onChainRubBalance, setRubBalance]);
 
-  // Faucet claim: call RubbiToken.claimFaucet()
-  const { writeContract: writeClaimFaucet, data: claimTxHash, isPending: isClaimPending } = useWriteContract();
-  const { isLoading: isClaimConfirming, isSuccess: claimSuccess } = useWaitForTransactionReceipt({ hash: claimTxHash });
-
-  // Read faucet claim count from contract
   const { data: faucetClaimCount } = useReadContract({
     address: RUB_TOKEN_ADDRESS,
     abi: RubbiTokenABI.abi,
@@ -101,69 +97,58 @@ export default function WalletPage() {
   const CLAIM_AMOUNT = 100;
   const claimCount = faucetClaimCount ? Number(faucetClaimCount) : 0;
   const claimsRemaining = Math.max(0, CLAIM_LIMIT - claimCount);
-
   const balance = Number(rubBalance || 0);
-  const usdValue = (balance / 50).toFixed(2);
 
   const handleClaim = async () => {
     if (!address) {
       error("Wallet Required", "Connect your wallet to claim RUBBI.");
       return;
     }
-
     if (!isCorrectNetwork) {
       error("Wrong Network", "Please switch to Arbitrum Sepolia.");
       return;
     }
-
     if (claimsRemaining <= 0) {
-      error("No Claims Remaining", "This wallet has already used all 3 lifetime faucet claims.");
+      error("No Claims Remaining", "All 3 lifetime faucet claims used.");
       return;
     }
 
     setClaimLoading(true);
-    info("Claiming Faucet...", "Broadcasting transaction to Arbitrum Sepolia.");
+    info("Claiming Faucet...", "Broadcasting transaction...");
 
-    try {
-      writeClaimFaucet({
-        address: RUB_TOKEN_ADDRESS,
-        abi: RubbiTokenABI.abi,
-        functionName: "claimFaucet",
-      });
-    } catch (err: any) {
-      error("Claim Failed", err.message);
-      setClaimLoading(false);
-    }
+    const txHash = await execute({
+      abi: RubbiTokenABI.abi as any,
+      address: RUB_TOKEN_ADDRESS,
+      functionName: "claimFaucet",
+      backendSync: {
+        endpoint: "faucet.claim",
+        params: {},
+      },
+      onSuccess: (hash) => {
+        const newCount = claimCount + 1;
+        const newBalance = balance + CLAIM_AMOUNT;
+        setRubBalance(String(newBalance));
+        setActivity((prev) => [
+          {
+            id: Date.now().toString(),
+            label: "Faucet Claim",
+            sub: "JUST NOW",
+            amount: `+${CLAIM_AMOUNT}.00`,
+            positive: true,
+            icon: "faucet",
+          },
+          ...prev,
+        ]);
+        success(
+          `${CLAIM_AMOUNT} RUBBI Claimed!`,
+          `${Math.max(0, CLAIM_LIMIT - newCount)} claims remaining.`
+        );
+        setTimeout(() => refetchRubBalance(), 2000);
+      },
+    });
+
+    setClaimLoading(false);
   };
-
-  // After claim succeeds, update activity and balance
-  useEffect(() => {
-    if (claimSuccess) {
-      const newCount = claimCount + 1;
-      const newBalance = balance + CLAIM_AMOUNT;
-      setRubBalance(String(newBalance));
-
-      setActivity((prev) => [
-        {
-          id: Date.now().toString(),
-          label: "Faucet Claim",
-          sub: "JUST NOW",
-          amount: `+${CLAIM_AMOUNT}.00`,
-          positive: true,
-          icon: "faucet",
-        },
-        ...prev,
-      ]);
-
-      success(
-        `${CLAIM_AMOUNT} RUBBI Claimed!`,
-        `${Math.max(0, CLAIM_LIMIT - newCount)} lifetime claim${Math.max(0, CLAIM_LIMIT - newCount) === 1 ? "" : "s"} remaining.`
-      );
-      setClaimLoading(false);
-      // Refetch on-chain balance to stay in sync
-      setTimeout(() => refetchRubBalance(), 2000);
-    }
-  }, [claimSuccess]);
 
   const handleDeposit = async () => {
     const amount = Number(depositAmount);
@@ -172,228 +157,159 @@ export default function WalletPage() {
       error("Wallet Required", "Connect your wallet before depositing.");
       return;
     }
-
     if (!isCorrectNetwork) {
       error("Wrong Network", "Please switch to Arbitrum Sepolia.");
       return;
     }
-
     if (!amount || amount <= 0) {
-      error("Invalid Amount", "Enter a valid deposit amount.");
+      error("Invalid Amount", "Enter a valid RUB amount to deposit.");
       return;
     }
 
     setDepositLoading(true);
-    info("Depositing RUBBI...", "Approving and depositing to ModalContract.");
+    const amountBigInt = BigInt(Math.floor(amount * 1e18));
 
-    try {
-      const amountBigInt = BigInt(Math.floor(amount * 1e18));
-      await depositFunds(amountBigInt);
+    await depositFunds(amountBigInt);
 
-      setActivity((prev) => [
-        {
-          id: Date.now().toString(),
-          label: "Contract Deposit",
-          sub: "JUST NOW",
-          amount: `-${amount.toFixed(2)}`,
-          positive: false,
-          icon: "deposit",
-        },
-        ...prev,
-      ]);
+    setActivity((prev) => [
+      {
+        id: Date.now().toString(),
+        label: "Deposited to Contract",
+        sub: "JUST NOW",
+        amount: `-${amount.toFixed(2)}`,
+        positive: false,
+        icon: "deposit",
+      },
+      ...prev,
+    ]);
 
-      setDepositAmount("");
-      setDepositModal(false);
-      success("Deposit Submitted", `${amount.toFixed(2)} RUBBI deposited to ModalContract.`);
-    } catch (err: any) {
-      error("Deposit Failed", err.message);
-    }
+    setDepositModal(false);
+    setDepositAmount("");
     setDepositLoading(false);
   };
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl lg:text-3xl font-extrabold text-neutral-900">Wallet</h1>
-        <p className="text-sm text-neutral-500 mt-1">Manage your RUBBI balance, claim faucet rewards, and deposit to ModalContract.</p>
+        <h1 className="text-2xl font-extrabold text-neutral-900">Wallet</h1>
+        <p className="text-sm text-neutral-500 mt-1">Manage your RUB token balance</p>
       </div>
 
-      {!isCorrectNetwork && isConnected && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-              <span className="text-yellow-600">!</span>
-            </div>
-            <div>
-              <p className="font-semibold text-yellow-800">Wrong Network</p>
-              <p className="text-sm text-yellow-600">Please switch to Arbitrum Sepolia.</p>
-            </div>
-          </div>
-          <Button size="sm" onClick={switchToArbitrum}>Switch to Arbitrum</Button>
+      {/* ZeroDev Status Banner */}
+      {isZeroDevLoading && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+          <p className="text-xs text-blue-700">Initializing smart account for gasless transactions...</p>
+        </div>
+      )}
+      {isZeroDevReady && smartAccountAddress && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
+          <CheckCircle size={14} className="text-green-600" />
+          <p className="text-xs text-green-700">
+            Gasless transactions active. Smart account: {smartAccountAddress.slice(0, 6)}...{smartAccountAddress.slice(-4)}
+          </p>
+        </div>
+      )}
+      {zeroDevError && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-2">
+          <p className="text-xs text-amber-700">
+            ZeroDev unavailable (using standard transactions). Error: {zeroDevError.slice(0, 80)}
+          </p>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl p-7 border border-neutral-100">
-            <div className="inline-block text-xs font-bold uppercase tracking-widest text-primary/60 bg-primary/8 px-3 py-1.5 rounded-full mb-5">
-              RUBBI Balance
-            </div>
-            <p className="text-5xl font-extrabold text-neutral-900">
-              {balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              <span className="text-2xl font-bold text-neutral-400 ml-2">RUBBI</span>
-            </p>
-            <p className="text-neutral-400 mt-2">≈ ${usdValue} USD (at 50 RUBBI = $1)</p>
-
-            <div className="flex flex-wrap gap-3 mt-6">
-              <Button size="md" onClick={() => setDepositModal(true)}>Deposit to Contract</Button>
-              <Button size="md" variant="outlined" onClick={() => window.dispatchEvent(new CustomEvent("open-swap-modal"))}>
-                <ArrowLeftRight size={14} className="mr-1" /> Swap Tokens
-              </Button>
-            </div>
-          </div>
-
-          {/* ModalContract Balance */}
-          <div className="bg-white rounded-2xl p-6 border border-neutral-100 mt-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400">ModalContract Balance</h3>
-              <span className="text-xs text-neutral-400">For subscriptions & streams</span>
-            </div>
-            <p className="text-2xl font-extrabold text-primary">
-              {modalBalance ? (Number(modalBalance) / 1e18).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00"}
-              <span className="text-lg font-bold text-neutral-400 ml-2">RUBBI</span>
-            </p>
-            <p className="text-xs text-neutral-400 mt-1">Deposited funds available for automated payments</p>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 border border-neutral-100 mt-4">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-5">Recent Ledger Activity</h3>
-            {activity.length === 0 ? (
-              <p className="text-sm text-neutral-400 text-center py-4">No recent activity</p>
-            ) : (
-              <div className="space-y-4">
-                {activity.map((item) => (
-                  <div key={item.id} className="flex items-center gap-4">
-                    <ActivityIcon type={item.icon} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-neutral-800">{item.label}</p>
-                      <p className="text-xs text-neutral-400 font-medium tracking-wider">{item.sub}</p>
-                    </div>
-                    <p className={`text-sm font-extrabold ${item.positive ? "text-green-600" : "text-red-500"}`}>
-                      {item.amount}
-                      <span className="text-xs font-bold text-neutral-400 ml-1">RUBBI</span>
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">RUB Balance</p>
+          <p className="text-2xl font-extrabold text-primary mt-1">{balance.toFixed(2)}</p>
+          <p className="text-xs text-neutral-400 mt-0.5">≈ ${(balance / 50).toFixed(2)} USD</p>
         </div>
-
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-neutral-900 text-base">Rubbi Faucet</h3>
-              <Droplets size={24} className="text-primary/30" />
-            </div>
-            <p className="text-xs text-neutral-500 leading-relaxed mb-5">
-              Claim 100 RUBBI per claim to test the platform. Each wallet can claim up to 3 times lifetime.
-            </p>
-
-            <div className="flex items-center justify-between bg-neutral-50 rounded-xl px-4 py-3 mb-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-neutral-500">Claims Remaining</span>
-              <span className="font-extrabold text-primary text-sm">{claimsRemaining} / {CLAIM_LIMIT}</span>
-            </div>
-
-            <Button
-              size="md"
-              fullWidth
-              loading={claimLoading || isClaimPending || isClaimConfirming}
-              disabled={!isConnected || !isCorrectNetwork || claimsRemaining <= 0}
-              icon={<Droplets size={15} />}
-              onClick={handleClaim}
-            >
-              {claimsRemaining > 0 ? `Claim ${CLAIM_AMOUNT} RUBBI` : "Limit Reached"}
-            </Button>
-            <p className="text-center text-xs text-neutral-400 mt-3">On-chain faucet • 3 lifetime claims per wallet</p>
-          </div>
-
-          <div className="bg-neutral-50 rounded-2xl p-5 border border-neutral-100">
-            <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">Protocol Status</p>
-            <p className="text-xs text-neutral-500 leading-relaxed">
-              Faucet distribution is on-chain via RubbiToken.claimFaucet(). Deposits go to ModalContract for subscription/stream payments.
-            </p>
-            <div className="flex items-center gap-2 mt-4">
-              <CheckCircle size={14} className="text-green-500" />
-              <span className="text-xs font-semibold text-neutral-600">Arbitrum Sepolia ready</span>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-5 border border-neutral-100">
-            <p className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-3">Connected Wallet</p>
-            <p className="font-mono text-xs text-neutral-600 break-all">
-              {address ? `${address.slice(0, 8)}...${address.slice(-6)}` : "Not connected"}
-            </p>
-          </div>
-
-          {RUB_TOKEN_ADDRESS && (
-            <div className="bg-primary/5 rounded-2xl p-5 border border-primary/10">
-              <p className="text-xs font-bold uppercase tracking-widest text-primary/60 mb-3">Import RUB Token</p>
-              <p className="text-xs text-neutral-500 leading-relaxed mb-3">
-                Add the RUB token to your wallet to see your balance. Click below to copy the contract address, then import it in MetaMask.
-              </p>
-              <p className="font-mono text-[11px] text-neutral-600 bg-white rounded-lg px-3 py-2 border border-neutral-100 break-all mb-3">
-                {RUB_TOKEN_ADDRESS}
-              </p>
-              <Button
-                size="sm"
-                fullWidth
-                variant="outlined"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(RUB_TOKEN_ADDRESS);
-                    success("Copied!", "RUB token address copied to clipboard.");
-                  } catch {
-                    info("Token Address", RUB_TOKEN_ADDRESS);
-                  }
-                }}
-              >
-                Copy Contract Address
-              </Button>
-              <p className="text-[10px] text-neutral-400 mt-2 text-center">Network: Arbitrum Sepolia</p>
-            </div>
-          )}
+        <div className="bg-white rounded-xl border border-neutral-200 p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">ModalContract</p>
+          <p className="text-2xl font-extrabold text-primary mt-1">{Number(modalBalance || 0).toFixed(2)}</p>
+          <p className="text-xs text-neutral-400 mt-0.5">Available for subscriptions</p>
+        </div>
+        <div className="bg-white rounded-xl border border-neutral-200 p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Faucet Claims</p>
+          <p className="text-2xl font-extrabold text-primary mt-1">{claimsRemaining}</p>
+          <p className="text-xs text-neutral-400 mt-0.5">{CLAIM_AMOUNT} RUB per claim</p>
         </div>
       </div>
 
-      {depositModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setDepositModal(false)}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-scaleIn" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-lg font-bold text-neutral-900 mb-2">Deposit RUBBI</h2>
-            <p className="text-xs text-neutral-400 mb-5">Deposit RUB tokens into ModalContract for subscriptions and salary streams.</p>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Amount</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    placeholder="0.00"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    className="w-full px-4 py-3 pr-14 bg-neutral-50 border-2 border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400">RUBBI</span>
+      <div className="flex flex-wrap gap-3">
+        <Button
+          onClick={handleClaim}
+          loading={claimLoading || isWriting}
+          disabled={claimsRemaining <= 0}
+          icon={<Droplets size={16} />}
+        >
+          Claim {CLAIM_AMOUNT} RUBBI
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={() => setDepositModal(true)}
+          icon={<ArrowDownRight size={16} />}
+        >
+          Deposit to Contract
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => window.dispatchEvent(new CustomEvent("open-swap-modal"))}
+          icon={<ArrowLeftRight size={16} />}
+        >
+          Swap Assets
+        </Button>
+      </div>
+
+      {activity.length > 0 && (
+        <div>
+          <h2 className="text-lg font-bold text-neutral-900 mb-3">Recent Activity</h2>
+          <div className="space-y-2">
+            {activity.map((item) => (
+              <div key={item.id} className="bg-white rounded-xl border border-neutral-200 p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <ActivityIcon type={item.icon} />
+                  <div>
+                    <p className="font-semibold text-neutral-900">{item.label}</p>
+                    <p className="text-xs text-neutral-400">{item.sub}</p>
+                  </div>
                 </div>
+                <p className={`font-bold ${item.positive ? "text-green-600" : "text-neutral-900"}`}>
+                  {item.amount} RUB
+                </p>
               </div>
-              <p className="text-xs text-neutral-400">
-                Your wallet balance: {balance.toFixed(2)} RUBBI. 
-                This calls ModalContract.deposit() on-chain to transfer tokens.
-              </p>
-              <div className="flex gap-3">
-                <Button variant="ghost" size="md" fullWidth onClick={() => setDepositModal(false)}>Cancel</Button>
-                <Button size="md" fullWidth loading={depositLoading} onClick={handleDeposit}>Deposit</Button>
-              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {depositModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md animate-scaleIn">
+            <h3 className="text-lg font-bold text-neutral-900 mb-4">Deposit to Contract</h3>
+            <p className="text-sm text-neutral-500 mb-4">
+              Transfer RUB tokens to ModalContract for subscription payments.
+            </p>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              placeholder="Amount in RUB"
+              value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-primary mb-4"
+            />
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => setDepositModal(false)}>
+                Cancel
+              </Button>
+              <Button
+                fullWidth
+                loading={depositLoading}
+                onClick={handleDeposit}
+              >
+                Deposit
+              </Button>
             </div>
           </div>
         </div>

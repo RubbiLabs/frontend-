@@ -1,8 +1,9 @@
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount, useChainId } from "wagmi";
+import { useReadContract, useAccount, useChainId } from "wagmi";
 import { useBlockchainStore } from "@/store/blockchainStore";
+import { useContractWrite } from "@/hooks/useContractWrite";
 import SubscriptionServiceABI from "@/Abis/SubscriptionService.json";
 import ModalABI from "@/Abis/Modal.json";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useToast } from "@/context/ToastContext";
 
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
@@ -14,15 +15,17 @@ export function useSubscription() {
   const { address } = useAccount();
   const chainId = useChainId();
   const { showToast } = useToast();
-  const { 
-    subscriptionPlans, 
-    setSubscriptionPlans, 
-    userSubscriptions, 
+  const { execute, isWriting } = useContractWrite();
+  const {
+    subscriptionPlans,
+    setSubscriptionPlans,
+    userSubscriptions,
     setUserSubscriptions,
     setIsCorrectNetwork,
     setIsLoading,
-    setError 
+    setError,
   } = useBlockchainStore();
+  const [isSuccess, setIsSuccess] = useState(false);
 
   useEffect(() => {
     setIsCorrectNetwork(chainId === ARBITRUM_SEPOLIA_CHAIN_ID);
@@ -34,7 +37,7 @@ export function useSubscription() {
     functionName: "getAllSubscriptionPlans",
     query: {
       enabled: !!address && chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
-    }
+    },
   });
 
   const { data: subsData, refetch: refetchSubs } = useReadContract({
@@ -44,97 +47,74 @@ export function useSubscription() {
     args: address ? [address] : undefined,
     query: {
       enabled: !!address && chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
-    }
+    },
   });
 
   useEffect(() => {
-    if (plansData) {
-      setSubscriptionPlans(plansData as any);
-    }
+    if (plansData) setSubscriptionPlans(plansData as any);
   }, [plansData, setSubscriptionPlans]);
 
   useEffect(() => {
-    if (subsData) {
-      setUserSubscriptions(subsData as any);
-    }
+    if (subsData) setUserSubscriptions(subsData as any);
   }, [subsData, setUserSubscriptions]);
 
-  const { writeContract: subscribe, data: subscribeHash } = useWriteContract();
-  
-  const { isLoading: isSubscribing, isSuccess: subscribeSuccess } = 
-    useWaitForTransactionReceipt({ hash: subscribeHash });
-
   const startSubscription = async (planId: number, email: string, password: string) => {
-    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
-      return;
-    }
-    
-    if (!address) {
-      showToast("error", "Not Connected", "Please connect your wallet first");
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
+    setIsSuccess(false);
 
-    try {
-      subscribe({
-        address: subscriptionServiceAddress,
-        abi: SubscriptionServiceABI.abi,
-        functionName: "startSubscription",
-        args: [BigInt(planId), email, password],
-      });
-    } catch (err: any) {
-      setError(err.message);
-      showToast("error", "Subscription Failed", err.message);
-    } finally {
-      setIsLoading(false);
-    }
+    const txHash = await execute({
+      abi: SubscriptionServiceABI.abi as any,
+      address: subscriptionServiceAddress,
+      functionName: "startSubscription",
+      args: [BigInt(planId), email, password],
+      backendSync: {
+        endpoint: "subscriptions.start",
+        params: { planId },
+      },
+      onSuccess: () => {
+        refetchSubs();
+        refetchPlans();
+        setIsSuccess(true);
+      },
+    });
+
+    setIsLoading(false);
+    return txHash;
   };
-
-  const { writeContract: pause, data: pauseHash } = useWriteContract();
-  const { isLoading: isPausing } = useWaitForTransactionReceipt({ hash: pauseHash });
 
   const pauseSubscription = async (planId: number) => {
-    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
-      return;
-    }
-
-    try {
-      pause({
-        address: subscriptionServiceAddress,
-        abi: SubscriptionServiceABI.abi,
-        functionName: "pauseSubscription",
-        args: [BigInt(planId)],
-      });
-      await refetchSubs();
-    } catch (err: any) {
-      showToast("error", "Pause Failed", err.message);
-    }
+    const txHash = await execute({
+      abi: SubscriptionServiceABI.abi as any,
+      address: subscriptionServiceAddress,
+      functionName: "pauseSubscription",
+      args: [BigInt(planId)],
+      backendSync: {
+        endpoint: "subscriptions.pause",
+        params: { planId },
+      },
+      onSuccess: () => {
+        refetchSubs();
+      },
+    });
+    return txHash;
   };
 
-  const { writeContract: resume, data: resumeHash } = useWriteContract();
-  const { isLoading: isResuming } = useWaitForTransactionReceipt({ hash: resumeHash });
-
   const resumeSubscription = async (planId: number) => {
-    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
-      return;
-    }
-
-    try {
-      resume({
-        address: subscriptionServiceAddress,
-        abi: SubscriptionServiceABI.abi,
-        functionName: "resumeSubscription",
-        args: [BigInt(planId)],
-      });
-      await refetchSubs();
-    } catch (err: any) {
-      showToast("error", "Resume Failed", err.message);
-    }
+    const txHash = await execute({
+      abi: SubscriptionServiceABI.abi as any,
+      address: subscriptionServiceAddress,
+      functionName: "resumeSubscription",
+      args: [BigInt(planId)],
+      backendSync: {
+        endpoint: "subscriptions.resume",
+        params: { planId },
+      },
+      onSuccess: () => {
+        refetchSubs();
+      },
+    });
+    return txHash;
   };
 
   return {
@@ -142,8 +122,8 @@ export function useSubscription() {
     userSubscriptions,
     isLoadingPlans,
     startSubscription,
-    isSubscribing: isSubscribing || isPausing || isResuming,
-    subscribeSuccess,
+    isSubscribing: isWriting,
+    subscribeSuccess: isSuccess,
     pauseSubscription,
     resumeSubscription,
     refetchPlans,
@@ -156,6 +136,7 @@ export function useModalContract() {
   const chainId = useChainId();
   const { setUserBalance, setIsCorrectNetwork } = useBlockchainStore();
   const { showToast } = useToast();
+  const { execute, isWriting } = useContractWrite();
 
   useEffect(() => {
     setIsCorrectNetwork(chainId === ARBITRUM_SEPOLIA_CHAIN_ID);
@@ -168,41 +149,39 @@ export function useModalContract() {
     args: address ? [address] : undefined,
     query: {
       enabled: !!address && chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
-    }
+    },
   });
 
   useEffect(() => {
-    if (balanceData) {
-      setUserBalance((balanceData as bigint).toString());
-    }
+    if (balanceData) setUserBalance((balanceData as bigint).toString());
   }, [balanceData, setUserBalance]);
 
-  const { writeContract: deposit, data: depositHash } = useWriteContract();
-  const { isLoading: isDepositing } = useWaitForTransactionReceipt({ hash: depositHash });
-
   const depositFunds = async (amount: bigint) => {
-    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
-      return;
-    }
+    await execute({
+      abi: ModalABI.abi as any,
+      address: modalContractAddress,
+      functionName: "deposit",
+      args: [amount],
+      onSuccess: () => refetchBalance(),
+    });
+  };
 
-    try {
-      deposit({
-        address: modalContractAddress,
-        abi: ModalABI.abi,
-        functionName: "deposit",
-        args: [amount],
-      });
-      await refetchBalance();
-    } catch (err: any) {
-      showToast("error", "Deposit Failed", err.message);
-    }
+  const withdrawFunds = async (amount: bigint) => {
+    await execute({
+      abi: ModalABI.abi as any,
+      address: modalContractAddress,
+      functionName: "withdraw",
+      args: [amount],
+      onSuccess: () => refetchBalance(),
+    });
   };
 
   return {
     balance: balanceData ? (balanceData as bigint).toString() : "0",
-    isDepositing,
+    isDepositing: isWriting,
     depositFunds,
+    isWithdrawing: isWriting,
+    withdrawFunds,
     refetchBalance,
   };
 }

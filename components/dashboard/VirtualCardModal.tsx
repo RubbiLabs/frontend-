@@ -44,8 +44,8 @@ export default function VirtualCardModal({ open, onClose, onComplete }: Props) {
       return;
     }
 
-    if (!/^\d{6}$/.test(pin)) {
-      error("PIN Required", "Enter a 6-digit PIN to secure your virtual card.");
+    if (!/^\d{4}$/.test(pin)) {
+      error("PIN Required", "Enter a 4-digit PIN to secure your virtual card.");
       return;
     }
 
@@ -99,7 +99,7 @@ export default function VirtualCardModal({ open, onClose, onComplete }: Props) {
               <div>
                 <p className="text-sm font-semibold text-amber-800">Virtual Card Required</p>
                 <p className="text-xs text-amber-600 mt-0.5 leading-relaxed">
-                  Choose your username, set your 6-digit PIN, and we'll issue the card used for all subscription payments.
+                  Choose your username, set your 4-digit PIN, and we'll issue the card used for all subscription payments.
                 </p>
               </div>
             </div>
@@ -120,14 +120,14 @@ export default function VirtualCardModal({ open, onClose, onComplete }: Props) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">6-Digit PIN</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">4-Digit PIN</label>
                 <input
                   type={showPin ? "text" : "password"}
                   inputMode="numeric"
-                  maxLength={6}
-                  placeholder="******"
+                  maxLength={4}
+                  placeholder="****"
                   value={pin}
-                  onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
                   className="w-full py-3 px-4 border-2 border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all"
                 />
               </div>
@@ -145,10 +145,10 @@ export default function VirtualCardModal({ open, onClose, onComplete }: Props) {
                 <input
                   type={showPin ? "text" : "password"}
                   inputMode="numeric"
-                  maxLength={6}
-                  placeholder="******"
+                  maxLength={4}
+                  placeholder="****"
                   value={confirmPin}
-                  onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
                   className="w-full py-3 px-4 border-2 border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all"
                 />
               </div>

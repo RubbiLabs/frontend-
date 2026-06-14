@@ -1,8 +1,8 @@
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount, useChainId } from "wagmi";
+import { useReadContract, useAccount, useChainId } from "wagmi";
 import { useBlockchainStore } from "@/store/blockchainStore";
+import { useContractWrite } from "@/hooks/useContractWrite";
 import SalaryStreamingABI from "@/Abis/SalaryStreaming.json";
 import { useEffect } from "react";
-import { useToast } from "@/context/ToastContext";
 
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 
@@ -17,15 +17,15 @@ export interface StreamDetails {
 export function useSalaryStreaming() {
   const { address } = useAccount();
   const chainId = useChainId();
-  const { showToast } = useToast();
-  const { 
-    dailyStreams, 
-    setDailyStreams, 
-    monthlyStreams, 
+  const { execute, isWriting } = useContractWrite();
+  const {
+    dailyStreams,
+    setDailyStreams,
+    monthlyStreams,
     setMonthlyStreams,
     setIsCorrectNetwork,
     setIsLoading,
-    setError 
+    setError,
   } = useBlockchainStore();
 
   useEffect(() => {
@@ -36,151 +36,127 @@ export function useSalaryStreaming() {
     address: salaryStreamingAddress,
     abi: SalaryStreamingABI.abi,
     functionName: "getAllDailyStreams",
-    query: {
-      enabled: chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
-    }
+    query: { enabled: chainId === ARBITRUM_SEPOLIA_CHAIN_ID },
   });
 
   const { data: monthlyData, isLoading: isLoadingMonthly, refetch: refetchMonthly } = useReadContract({
     address: salaryStreamingAddress,
     abi: SalaryStreamingABI.abi,
     functionName: "getAllMonthlyStreams",
-    query: {
-      enabled: chainId === ARBITRUM_SEPOLIA_CHAIN_ID,
-    }
+    query: { enabled: chainId === ARBITRUM_SEPOLIA_CHAIN_ID },
   });
 
   useEffect(() => {
-    if (dailyData) {
-      setDailyStreams(dailyData as any);
-    }
+    if (dailyData) setDailyStreams(dailyData as any);
   }, [dailyData, setDailyStreams]);
 
   useEffect(() => {
-    if (monthlyData) {
-      setMonthlyStreams(monthlyData as any);
-    }
+    if (monthlyData) setMonthlyStreams(monthlyData as any);
   }, [monthlyData, setMonthlyStreams]);
 
-  const { writeContract: createStream, data: createHash } = useWriteContract();
-  const { isLoading: isCreating, isSuccess: createSuccess } = 
-    useWaitForTransactionReceipt({ hash: createHash });
-
   const createStreamFn = async (streams: StreamDetails[], intervalType: 1 | 2) => {
-    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
-      return;
-    }
-
-    if (!address) {
-      showToast("error", "Not Connected", "Please connect your wallet first");
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
 
-    try {
-      createStream({
-        address: salaryStreamingAddress,
-        abi: SalaryStreamingABI.abi,
-        functionName: "createStream",
-        args: [streams, intervalType],
-      });
-    } catch (err: any) {
-      setError(err.message);
-      showToast("error", "Stream Creation Failed", err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    const txHash = await execute({
+      abi: SalaryStreamingABI.abi as any,
+      address: salaryStreamingAddress,
+      functionName: "createStream",
+      args: [streams, intervalType],
+      backendSync: {
+        endpoint: "salaryStreaming.create",
+        params: {},
+      },
+      onSuccess: () => {
+        refetchDaily();
+        refetchMonthly();
+      },
+    });
 
-  const { writeContract: pauseDaily, data: pauseDailyHash } = useWriteContract();
-  const { isLoading: isPausingDaily } = useWaitForTransactionReceipt({ hash: pauseDailyHash });
+    setIsLoading(false);
+    return txHash;
+  };
 
   const pauseDailyStream = async (streamId: number) => {
-    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
-      return;
-    }
-
-    try {
-      pauseDaily({
-        address: salaryStreamingAddress,
-        abi: SalaryStreamingABI.abi,
-        functionName: "pauseDailyStream",
-        args: [BigInt(streamId)],
-      });
-      await refetchDaily();
-    } catch (err: any) {
-      showToast("error", "Pause Failed", err.message);
-    }
+    await execute({
+      abi: SalaryStreamingABI.abi as any,
+      address: salaryStreamingAddress,
+      functionName: "pauseDailyStream",
+      args: [BigInt(streamId)],
+      backendSync: {
+        endpoint: "salaryStreaming.pause",
+        params: { streamId },
+      },
+      onSuccess: () => refetchDaily(),
+    });
   };
-
-  const { writeContract: pauseMonthly, data: pauseMonthlyHash } = useWriteContract();
-  const { isLoading: isPausingMonthly } = useWaitForTransactionReceipt({ hash: pauseMonthlyHash });
 
   const pauseMonthlyStream = async (streamId: number) => {
-    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
-      return;
-    }
-
-    try {
-      pauseMonthly({
-        address: salaryStreamingAddress,
-        abi: SalaryStreamingABI.abi,
-        functionName: "pauseMonthlyStream",
-        args: [BigInt(streamId)],
-      });
-      await refetchMonthly();
-    } catch (err: any) {
-      showToast("error", "Pause Failed", err.message);
-    }
+    await execute({
+      abi: SalaryStreamingABI.abi as any,
+      address: salaryStreamingAddress,
+      functionName: "pauseMonthlyStream",
+      args: [BigInt(streamId)],
+      backendSync: {
+        endpoint: "salaryStreaming.pause",
+        params: { streamId },
+      },
+      onSuccess: () => refetchMonthly(),
+    });
   };
-
-  const { writeContract: resumeDaily, data: resumeDailyHash } = useWriteContract();
-  const { isLoading: isResumingDaily } = useWaitForTransactionReceipt({ hash: resumeDailyHash });
 
   const resumeDailyStream = async (streamId: number) => {
-    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
-      return;
-    }
-
-    try {
-      resumeDaily({
-        address: salaryStreamingAddress,
-        abi: SalaryStreamingABI.abi,
-        functionName: "resumeDailyStream",
-        args: [BigInt(streamId)],
-      });
-      await refetchDaily();
-    } catch (err: any) {
-      showToast("error", "Resume Failed", err.message);
-    }
+    await execute({
+      abi: SalaryStreamingABI.abi as any,
+      address: salaryStreamingAddress,
+      functionName: "resumeDailyStream",
+      args: [BigInt(streamId)],
+      backendSync: {
+        endpoint: "salaryStreaming.resume",
+        params: { streamId },
+      },
+      onSuccess: () => refetchDaily(),
+    });
   };
 
-  const { writeContract: resumeMonthly, data: resumeMonthlyHash } = useWriteContract();
-  const { isLoading: isResumingMonthly } = useWaitForTransactionReceipt({ hash: resumeMonthlyHash });
-
   const resumeMonthlyStream = async (streamId: number) => {
-    if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-      showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
-      return;
-    }
+    await execute({
+      abi: SalaryStreamingABI.abi as any,
+      address: salaryStreamingAddress,
+      functionName: "resumeMonthlyStream",
+      args: [BigInt(streamId)],
+      backendSync: {
+        endpoint: "salaryStreaming.resume",
+        params: { streamId },
+      },
+      onSuccess: () => refetchMonthly(),
+    });
+  };
 
-    try {
-      resumeMonthly({
-        address: salaryStreamingAddress,
-        abi: SalaryStreamingABI.abi,
-        functionName: "resumeMonthlyStream",
-        args: [BigInt(streamId)],
-      });
-      await refetchMonthly();
-    } catch (err: any) {
-      showToast("error", "Resume Failed", err.message);
-    }
+  const disburseDaily = async () => {
+    await execute({
+      abi: SalaryStreamingABI.abi as any,
+      address: salaryStreamingAddress,
+      functionName: "disburseDaily",
+      backendSync: {
+        endpoint: "salaryStreaming.disburse",
+        params: {},
+      },
+      onSuccess: () => refetchDaily(),
+    });
+  };
+
+  const disburseMonthly = async () => {
+    await execute({
+      abi: SalaryStreamingABI.abi as any,
+      address: salaryStreamingAddress,
+      functionName: "disburseMonthly",
+      backendSync: {
+        endpoint: "salaryStreaming.disburse",
+        params: {},
+      },
+      onSuccess: () => refetchMonthly(),
+    });
   };
 
   return {
@@ -188,12 +164,13 @@ export function useSalaryStreaming() {
     monthlyStreams,
     isLoading: isLoadingDaily || isLoadingMonthly,
     createStream: createStreamFn,
-    isCreating: isCreating || isPausingDaily || isPausingMonthly || isResumingDaily || isResumingMonthly,
-    createSuccess,
+    isCreating: isWriting,
     pauseDailyStream,
     pauseMonthlyStream,
     resumeDailyStream,
     resumeMonthlyStream,
+    disburseDaily,
+    disburseMonthly,
     refetchDaily,
     refetchMonthly,
   };

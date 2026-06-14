@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { WalletProvider } from "@/context/WalletContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { ZeroDevProvider } from "@/context/ZeroDevContext";
 
 const queryClient = new QueryClient();
 
@@ -20,7 +21,9 @@ export default function Providers({
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <WalletProvider>
-            {children}
+            <ZeroDevProvider>
+              {children}
+            </ZeroDevProvider>
           </WalletProvider>
         </ToastProvider>
       </QueryClientProvider>
