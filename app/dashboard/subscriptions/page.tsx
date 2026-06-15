@@ -9,6 +9,8 @@ import {
   Check,
   AlertCircle,
   Loader2,
+  DollarSign,
+  Tv,
 } from "lucide-react";
 import { useAccount, useChainId } from "wagmi";
 import { useSubscription } from "@/hooks/useContracts";
@@ -213,44 +215,68 @@ export default function SubscriptionsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-extrabold text-neutral-900">
-          Subscriptions
-        </h1>
-        <p className="text-sm text-neutral-500 mt-1">
-          Manage your streaming and service subscriptions
-        </p>
+      <div className="bg-gradient-to-r from-primary to-secondary rounded-2xl p-6 text-white mb-6">
+        <h1 className="text-2xl lg:text-3xl font-extrabold">Subscriptions</h1>
+        <p className="text-sm text-white/70 mt-1">Manage your streaming and service subscriptions</p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-neutral-200 p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">
-            Active
-          </p>
-          <p className="text-2xl font-extrabold text-primary mt-1">
-            {userSubscriptions
-              ? (userSubscriptions as any[]).filter((s: any) => s.active).length
-              : 0}
-          </p>
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 hover:shadow-md transition-all duration-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+              <Check size={18} className="text-green-600" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Active</p>
+              <p className="text-2xl font-extrabold text-neutral-900">
+                {userSubscriptions
+                  ? (userSubscriptions as any[]).filter((s: any) => s.active).length
+                  : 0}
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-neutral-200 p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">
-            Monthly Outflow
-          </p>
-          <p className="text-2xl font-extrabold text-primary mt-1">
-            {monthlyOutflow.toFixed(2)} RUB
-          </p>
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 hover:shadow-md transition-all duration-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+              <DollarSign size={18} className="text-orange-600" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Monthly Outflow</p>
+              <p className="text-2xl font-extrabold text-neutral-900">
+                {monthlyOutflow.toFixed(2)} RUB
+              </p>
+            </div>
+          </div>
         </div>
-        <div className="bg-white rounded-xl border border-neutral-200 p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">
-            Available Plans
-          </p>
-          <p className="text-2xl font-extrabold text-primary mt-1">
-            {subscriptionChannels.length}
-          </p>
+        <div className="bg-white rounded-xl border border-neutral-200 p-4 hover:shadow-md transition-all duration-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+              <Tv size={18} className="text-blue-600" />
+            </div>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Available Plans</p>
+              <p className="text-2xl font-extrabold text-neutral-900">
+                {subscriptionChannels.length}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Empty state for no subscriptions */}
+      {(!userSubscriptions || (userSubscriptions as any[]).length === 0) && (
+        <div className="bg-white rounded-2xl border border-neutral-100 p-8 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <CreditCard size={24} className="text-primary" />
+          </div>
+          <h3 className="text-lg font-extrabold text-neutral-900">No Active Subscriptions</h3>
+          <p className="text-sm text-neutral-500 mt-2 max-w-md mx-auto">
+            You haven't subscribed to any channels yet. Browse the catalog below to find streaming services, tools, and platforms to subscribe to.
+          </p>
+        </div>
+      )}
 
       {/* Active Subscriptions */}
       {userSubscriptions && (userSubscriptions as any[]).length > 0 && (
@@ -258,7 +284,7 @@ export default function SubscriptionsPage() {
           <h2 className="text-lg font-bold text-neutral-900 mb-3">
             Your Subscriptions
           </h2>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {(userSubscriptions as any[]).map((sub: any, i: number) => {
               const name = sub.planName || "Unknown";
               const fee = Number(sub.fee || 0n) / 1e18;
@@ -266,11 +292,11 @@ export default function SubscriptionsPage() {
               return (
                 <div
                   key={i}
-                  className="bg-white rounded-xl border border-neutral-200 p-4 flex items-center justify-between"
+                  className="bg-white rounded-xl border border-neutral-200 p-5 flex items-center justify-between hover:shadow-md transition-all duration-200"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <CreditCard size={18} className="text-primary" />
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <CreditCard size={22} className="text-primary" />
                     </div>
                     <div>
                       <p className="font-semibold text-neutral-900">{name}</p>
@@ -313,7 +339,7 @@ export default function SubscriptionsPage() {
       )}
 
       {/* Browse Catalog */}
-      <div>
+      <div className="border-t border-neutral-200 pt-6">
         <h2 className="text-lg font-bold text-neutral-900 mb-3">
           Browse Channels
         </h2>
@@ -338,7 +364,7 @@ export default function SubscriptionsPage() {
               key={key}
               type="button"
               onClick={() => setCategoryFilter(key)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
                 categoryFilter === key
                   ? "bg-primary text-white"
                   : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
@@ -372,7 +398,7 @@ export default function SubscriptionsPage() {
                   key={channel.id}
                   type="button"
                   onClick={() => handleChannelClick(channel)}
-                  className="text-left bg-white rounded-xl border border-neutral-200 p-4 hover:border-primary/40 hover:shadow-md transition-all group"
+                  className="text-left bg-white rounded-xl border border-neutral-200 p-4 hover:border-primary/40 hover:shadow-md hover:scale-[1.02] transition-all duration-200 group"
                 >
                   <div className="flex items-center gap-3 mb-3">
                     <div className="w-10 h-10 rounded-xl overflow-hidden bg-neutral-100 flex items-center justify-center shrink-0">

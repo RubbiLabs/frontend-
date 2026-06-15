@@ -8,6 +8,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WalletProvider } from "@/context/WalletContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { ZeroDevProvider } from "@/context/ZeroDevContext";
+import { SocialAuthProvider } from "@/context/SocialAuthContext";
 
 const queryClient = new QueryClient();
 
@@ -20,11 +21,13 @@ export default function Providers({
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <WalletProvider>
-            <ZeroDevProvider>
-              {children}
-            </ZeroDevProvider>
-          </WalletProvider>
+          <SocialAuthProvider>
+            <WalletProvider>
+              <ZeroDevProvider>
+                {children}
+              </ZeroDevProvider>
+            </WalletProvider>
+          </SocialAuthProvider>
         </ToastProvider>
       </QueryClientProvider>
     </WagmiProvider>

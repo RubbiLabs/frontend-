@@ -13,6 +13,7 @@ import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useSwap } from "@/hooks/useSwap";
 import type { SwapToken } from "@/types";
+import { parseEther } from "viem";
 
 const TOKENS: SwapToken[] = ["ETH", "ARB"];
 
@@ -23,12 +24,12 @@ const tokenMeta: Record<
   ETH: {
     color: "bg-indigo-500",
     label: "Ethereum",
-    logo: "⟠",
+    logo: "/token-logo/Ether-img.png",
   },
   ARB: {
     color: "bg-sky-500",
     label: "Arbitrum",
-    logo: "A",
+    logo: "/token-logo/ARB-logo.png",
   },
 };
 
@@ -86,13 +87,8 @@ export default function BridgeAssetsModal({ open, onClose }: Props) {
   const outputFormatted = hasOutput ? formatTokenAmount(estimatedOutput) : "—";
 
   const handleMaxClick = () => {
-    // Leave a small buffer for gas if ETH
-    if (inputToken === "ETH") {
-      const max = inputBalance > parseEther("0.001") ? inputBalance - parseEther("0.001") : 0n;
-      setInputAmount(formatTokenAmount(max));
-    } else {
-      setInputAmount(formatTokenAmount(inputBalance));
-    }
+    // No gas buffer needed with ZeroDev gasless
+    setInputAmount(formatTokenAmount(inputBalance));
   };
 
   const handleSwap = async () => {
@@ -136,11 +132,7 @@ export default function BridgeAssetsModal({ open, onClose }: Props) {
                 }}
                 className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-xl text-sm font-semibold hover:border-primary/40 transition-all"
               >
-                <span
-                  className={`w-6 h-6 rounded-full ${meta.color} flex items-center justify-center text-white text-xs font-bold`}
-                >
-                  {meta.logo}
-                </span>
+                <img src={meta.logo} alt={`${inputToken} logo`} className="w-6 h-6 rounded-full object-cover" />
                 <span>{inputToken}</span>
                 <ChevronDown
                   size={14}
@@ -160,11 +152,7 @@ export default function BridgeAssetsModal({ open, onClose }: Props) {
                       }}
                       className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-neutral-50 transition-colors text-sm"
                     >
-                      <span
-                        className={`w-6 h-6 rounded-full ${tokenMeta[t].color} flex items-center justify-center text-white text-xs font-bold`}
-                      >
-                        {tokenMeta[t].logo}
-                      </span>
+                      <img src={tokenMeta[t].logo} alt={`${t} logo`} className="w-6 h-6 rounded-full object-cover" />
                       <span
                         className={
                           inputToken === t
@@ -330,10 +318,4 @@ export default function BridgeAssetsModal({ open, onClose }: Props) {
   );
 }
 
-function parseEther(value: string): bigint {
-  if (!value || Number(value) <= 0) return 0n;
-  const parts = value.split(".");
-  const intPart = parts[0] || "0";
-  const fracPart = (parts[1] || "").padEnd(18, "0").slice(0, 18);
-  return BigInt(intPart) * BigInt(10 ** 18) + BigInt(fracPart);
-}
+

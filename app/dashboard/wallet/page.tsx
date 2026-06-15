@@ -20,6 +20,7 @@ import { useAccount, useReadContract } from "wagmi";
 import RubbiTokenABI from "@/Abis/RubbiToken.json";
 import ERC20ABI from "@/Abis/ERC20.json";
 import { api } from "@/lib/api";
+import { trackTransaction } from "@/components/dashboard/DuneAnalytics";
 
 const RUB_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_RUBBI_TOKEN_ADDRESS as `0x${string}`;
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
@@ -128,6 +129,7 @@ export default function WalletPage() {
         const newCount = claimCount + 1;
         const newBalance = balance + CLAIM_AMOUNT;
         setRubBalance(String(newBalance));
+        trackTransaction();
         setActivity((prev) => [
           {
             id: Date.now().toString(),
@@ -243,7 +245,7 @@ export default function WalletPage() {
           disabled={claimsRemaining <= 0}
           icon={<Droplets size={16} />}
         >
-          Claim {CLAIM_AMOUNT} RUBBI
+          {claimsRemaining <= 0 ? "No Claims Remaining" : `Claim ${CLAIM_AMOUNT} RUBBI`}
         </Button>
         <Button
           variant="outlined"

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, Wallet } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
-import { useToast } from "@/context/ToastContext";
 import Button from "@/components/ui/Button";
 import RubbiLogo from "@/components/ui/RubbiLogo";
 
@@ -13,8 +12,7 @@ export default function LandingNavbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { isConnected, connect, isConnecting } = useWallet();
-  const { success, error } = useToast();
+  const { isConnected } = useWallet();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -23,17 +21,11 @@ export default function LandingNavbar() {
   }, []);
 
   const handleConnect = async () => {
-    try {
-      if (isConnected) {
-        router.push("/dashboard");
-        return;
-      }
-      await connect();
-      success("Wallet Connected", "Welcome to Rubbi Protocol.");
+    if (isConnected) {
       router.push("/dashboard");
-    } catch {
-      error("Connection Failed", "Could not connect wallet. Please try again.");
+      return;
     }
+    router.push("/onboarding");
   };
 
   const logoHref = isConnected ? "/dashboard" : "/";
@@ -43,6 +35,7 @@ export default function LandingNavbar() {
         { href: "/", label: "Home" },
         { href: "/about", label: "About" },
         { href: "/services", label: "Services" },
+        { href: "/docs", label: "Docs" },
       ];
 
   const isActive = (href: string) => pathname === href;
@@ -101,7 +94,7 @@ export default function LandingNavbar() {
                 icon={<Wallet size={16} />}
                 onClick={handleConnect}
               >
-                Connect Wallet
+                Begin Automation
               </Button>
             )}
           </div>
@@ -150,7 +143,7 @@ export default function LandingNavbar() {
                 icon={<Wallet size={16} />}
                 onClick={() => { setMobileOpen(false); handleConnect(); }}
               >
-                Connect Wallet
+                Begin Automation
               </Button>
             )}
           </div>

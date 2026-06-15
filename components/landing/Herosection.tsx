@@ -1,28 +1,20 @@
 "use client";
 import React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CreditCard, Shield, Wallet, Zap, ArrowUpRight, Repeat } from "lucide-react";
+import { CreditCard, Shield, Wallet, Zap, ArrowUpRight, Repeat } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
-import { useToast } from "@/context/ToastContext";
 import Button from "@/components/ui/Button";
 
 export default function HeroSection() {
   const router = useRouter();
-  const { isConnected, connect, isConnecting } = useWallet();
-  const { success, error } = useToast();
+  const { isConnected, isConnecting } = useWallet();
 
   const handleConnect = async () => {
-    try {
-      if (isConnected) {
-        router.push("/dashboard");
-        return;
-      }
-      await connect();
-      success("Wallet Connected!", "Redirecting to dashboard...");
+    if (isConnected) {
       router.push("/dashboard");
-    } catch {
-      error("Connection Failed", "Please try again or install MetaMask.");
+      return;
     }
+    router.push("/onboarding");
   };
 
   return (
@@ -65,15 +57,9 @@ export default function HeroSection() {
               loading={isConnecting}
               onClick={handleConnect}
             >
-              {isConnected ? "Go to Dashboard" : "Connect Wallet"}
+              {isConnected ? "Go to Dashboard" : "Begin Automation"}
             </Button>
-            <Button
-              size="lg"
-              variant="outlined"
-              onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
-            >
-              Learn More <ArrowRight size={16} className="ml-1" />
-            </Button>
+
           </div>
 
           {/* Trust badges */}

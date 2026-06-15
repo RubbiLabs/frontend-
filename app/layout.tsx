@@ -30,7 +30,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="font-manrope antialiased">
+      <body className="font-manrope antialiased" suppressHydrationWarning>
         <Providers>
           {children}
         </Providers>

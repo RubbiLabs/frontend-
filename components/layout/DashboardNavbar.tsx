@@ -1,11 +1,12 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, LogOut, Wallet } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
 import { navItems } from "@/components/layout/DashboardSidebar";
 import RubbiLogo from "@/components/ui/RubbiLogo";
+import Button from "@/components/ui/Button";
 
 interface DashboardNavbarProps {
   onMenuClick: () => void;
@@ -16,6 +17,7 @@ export default function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
   const router = useRouter();
   const { disconnect, address } = useWallet();
   const { info } = useToast();
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
   const handleDisconnect = () => {
     disconnect();
@@ -71,7 +73,7 @@ export default function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
 
           {/* Disconnect */}
           <button
-            onClick={handleDisconnect}
+            onClick={() => setShowDisconnectModal(true)}
             title="Disconnect wallet"
             className="p-2 rounded-xl text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
           >
@@ -79,6 +81,32 @@ export default function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
           </button>
         </div>
       </header>
+
+      {showDisconnectModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md animate-scaleIn">
+            <h3 className="text-lg font-bold text-neutral-900 mb-2">Disconnect Wallet?</h3>
+            <p className="text-sm text-neutral-500 mb-6">
+              Are you sure you want to disconnect your wallet? You will be redirected to the homepage.
+            </p>
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => setShowDisconnectModal(false)}>
+                Cancel
+              </Button>
+              <Button
+                fullWidth
+                variant="danger"
+                onClick={() => {
+                  setShowDisconnectModal(false);
+                  handleDisconnect();
+                }}
+              >
+                Disconnect
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
