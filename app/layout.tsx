@@ -1,35 +1,40 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { WalletProvider } from "../context/WalletContext";
-import { ToastProvider } from "../context/ToastContext";
-import { Web3Provider } from "@/providers/Web3Provider";
-import { NetworkBanner } from "@/components/ui/NetworkBanner";
+import Providers from "./providers";
 
 export const metadata: Metadata = {
-  title: "Rubbi — Decentralized Financial Automation",
-  description: "A heavy-duty ledger protocol for the Monad Network.",
+  title: "Rubbi — Decentralized Financial Automation on Arbitrum",
+  description: "Automate subscriptions, stream salaries, and manage digital assets on Arbitrum from a single, secure ledger.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/favicon.png", type: "image/png", sizes: "32x32" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+    other: [
+      { url: "/icon.png", type: "image/png", sizes: "192x192" },
+    ],
+  },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const viewport: Viewport = {
+  themeColor: "#22577A",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
-      </head>
       <body className="font-manrope antialiased">
-        <Web3Provider>
-          <WalletProvider>
-            <ToastProvider>
-              <NetworkBanner />
-              {children}
-            </ToastProvider>
-          </WalletProvider>
-        </Web3Provider>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );
 }
-
-// Just created a branch

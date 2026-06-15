@@ -5,6 +5,7 @@ import { Menu, LogOut, Wallet } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
 import { navItems } from "@/components/layout/DashboardSidebar";
+import RubbiLogo from "@/components/ui/RubbiLogo";
 
 interface DashboardNavbarProps {
   onMenuClick: () => void;
@@ -43,22 +44,14 @@ export default function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
 
           {/* Logo mark visible on mobile */}
           <div className="flex items-center gap-2 lg:hidden">
-            <div className="w-6 h-6 bg-primary rounded-md flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 48 48" fill="none">
-                <path
-                  d="M12 8H26C31.523 8 36 12.477 36 18C36 22.072 33.572 25.572 30.08 27.2L36 40H28L22.8 28H20V40H12V8Z"
-                  fill="#F7F7F2"
-                />
-              </svg>
-            </div>
-            <span className="font-bold text-primary text-sm">Rubbi</span>
+            <RubbiLogo size={28} />
           </div>
 
           {/* Desktop: brand name + current page */}
           <div className="hidden lg:flex items-center gap-2">
             {/* <span className="font-bold text-primary text-base">Rubbi</span>
             <span className="text-neutral-300">|</span> */}
-            <span className="text-sm text-neutral-500 font-medium">{activeLabel}</span>
+            {/* <span className="text-sm text-primary-400 font-bold">{activeLabel}</span> */}
           </div>
         </div>
 

@@ -51,16 +51,18 @@ export interface Toast {
   duration?: number;
 }
 
-export type BridgeToken = "USDC" | "USDT" | "DAI" | "MON" | "ETH";
-export type BridgeNetwork = "BSC (BEP20)" | "ERC20" | "TRON20";
+export type SwapToken = "ETH" | "ARB";
 
-// Token prices in USD (approximate)
-export const TOKEN_USD_PRICES: Record<BridgeToken, number> = {
-  USDC: 1.0,
-  USDT: 1.0,
-  DAI: 1.0,
-  MON: 0.5,
-  ETH: 3200,
+export const SWAP_TOKEN_ADDRESSES: Record<SwapToken, Record<number, `0x${string}`>> = {
+  ETH: {
+    421614: (process.env.NEXT_PUBLIC_WETH_ADDRESS as `0x${string}`) || "0x0000000000000000000000000000000000000000",
+  },
+  ARB: {
+    421614: (process.env.NEXT_PUBLIC_ARB_TOKEN_ADDRESS as `0x${string}`) || "0x0000000000000000000000000000000000000000",
+  },
 };
 
-export const RUB_PER_USD = 50;
+export const SWAP_TOKEN_DECIMALS: Record<SwapToken, number> = {
+  ETH: 18,
+  ARB: 18,
+};

@@ -8,7 +8,7 @@ interface Props {
   onComplete: () => void;
 }
 
-const EMPTY = ["", "", "", "", "", ""];
+const EMPTY = ["", "", "", ""];
 
 export default function Step2PIN({ onComplete }: Props) {
   const { success, error } = useToast();
@@ -29,7 +29,7 @@ export default function Step2PIN({ onComplete }: Props) {
     const next = [...arr];
     next[idx] = val;
     setArr(next);
-    if (val && idx < 5) refs.current[idx + 1]?.focus();
+    if (val && idx < 3) refs.current[idx + 1]?.focus();
   };
 
   const handleKeyDown = (
@@ -47,8 +47,8 @@ export default function Step2PIN({ onComplete }: Props) {
   const handleContinue = () => {
     const pin = pins.join("");
     const confirm = confirms.join("");
-    if (pin.length !== 6) {
-      error("Incomplete PIN", "Please fill all 6 digits.");
+    if (pin.length !== 4) {
+      error("Incomplete PIN", "Please fill all 4 digits.");
       return;
     }
     if (pin !== confirm) {
@@ -60,7 +60,7 @@ export default function Step2PIN({ onComplete }: Props) {
     }
     /* Store PIN off-chain only — never sent to blockchain */
     sessionStorage.setItem("rubbi_session_pin", btoa(pin));
-    success("Vault Secured!", "Your 6-digit PIN has been set.");
+    success("Vault Secured!", "Your 4-digit PIN has been set.");
     onComplete();
   };
 

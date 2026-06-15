@@ -1,5 +1,6 @@
 "use client";
 import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
 
 interface WalletContextValue {
   address: `0x${string}` | undefined;
@@ -87,7 +88,7 @@ function normalizeVirtualCardData(raw: Partial<VirtualCardData> | null | undefin
     expiry,
     cvv,
     network:
-      typeof raw.network === "string" && raw.network.trim() ? raw.network.trim() : "MONAD L1",
+      typeof raw.network === "string" && raw.network.trim() ? raw.network.trim() : "Arbitrum Sepolia",
     isActive: raw.isActive !== false,
   };
 }
@@ -225,8 +226,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setIsConnecting(true);
 
     try {
+      // Try wagmi connect first (via injected connector)
       if ((window as Window & { ethereum?: any }).ethereum) {
-        const ethereum = (window as Window & { ethereum: any }).ethereum;
+        const ethereum = (window as any).ethereum;
         const accounts: string[] = await ethereum.request({
           method: "eth_requestAccounts",
         });
@@ -265,6 +267,29 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(WALLET_KEY);
     }
   };
+
+  // Sync wagmi connection state with WalletContext
+  // When wagmi connects (e.g. via ConnectButton/Web3Modal), update WalletContext
+  const wagmiAccount = useAccount();
+  useEffect(() => {
+    if (!isHydrated) return;
+
+    if (wagmiAccount.isConnected && wagmiAccount.address) {
+      // wagmi is connected — sync to WalletContext
+      if (wagmiAccount.address !== address) {
+        setAddress(wagmiAccount.address);
+        setIsConnected(true);
+        setChainId(wagmiAccount.chainId);
+        localStorage.setItem(
+          WALLET_KEY,
+          JSON.stringify({ address: wagmiAccount.address, chainId: wagmiAccount.chainId })
+        );
+      }
+    } else if (!wagmiAccount.isConnected && !address) {
+      // Both disconnected — clear state
+      resetWalletScopedState();
+    }
+  }, [wagmiAccount.isConnected, wagmiAccount.address, wagmiAccount.chainId, isHydrated]);
 
   const setUsername = (name: string) => {
     const sanitizedName = name.trim().toLowerCase();

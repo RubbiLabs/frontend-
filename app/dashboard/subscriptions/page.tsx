@@ -1,293 +1,426 @@
 "use client";
-import React, { useRef, useState } from "react";
-import { Pause, Play, X } from "lucide-react";
-import Button from "../../../components/ui/Button";
-import VirtualCardModal from "../../../components/dashboard/VirtualCardModal";
-import { useWallet } from "../../../context/WalletContext";
-import { useToast } from "../../../context/ToastContext";
+import React, { useState, useMemo } from "react";
+import Image from "next/image";
+import {
+  Pause,
+  Play,
+  Search,
+  CreditCard,
+  Check,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import { useAccount, useChainId } from "wagmi";
+import { useSubscription } from "@/hooks/useContracts";
+import { useWallet } from "@/context/WalletContext";
+import { useToast } from "@/context/ToastContext";
+import Button from "@/components/ui/Button";
+import VirtualCardModal from "@/components/dashboard/VirtualCardModal";
+import SubscriptionPlanModal from "@/components/dashboard/SubscriptionPlanModal";
+import {
+  subscriptionChannels,
+  categoryLabels,
+  type CatalogChannel,
+  type SubscriptionPlanTier,
+} from "@/lib/subscriptions";
 
-interface Subscription {
-  id: string;
-  name: string;
-  fee: number;
-  nextPayment: string;
-  streamId: string;
-  uptime: string;
-  status: "active" | "paused";
-  color: string;
-}
-
-interface CatalogItem {
-  name: string;
-  fee: number;
-  period: string;
-  color: string;
-  category: "entertainment" | "cloud" | "finance";
-}
-
-const mockSubs: Subscription[] = [
-  { id: "1", name: "Netflix Premium", fee: 15.99, nextPayment: "Nov 24, 2024", streamId: "#RB-7729-001", uptime: "342 Days", status: "active", color: "bg-red-600" },
-  { id: "2", name: "DSTV Premium Plus", fee: 45.0, nextPayment: "Pending", streamId: "#RB-7730-002", uptime: "120 Days", status: "paused", color: "bg-blue-800" },
-  { id: "3", name: "Spotify Family Plan", fee: 9.99, nextPayment: "Nov 30, 2024", streamId: "#RB-7731-003", uptime: "200 Days", status: "active", color: "bg-green-600" },
-  { id: "4", name: "AWS Cloud Instance", fee: 71.52, nextPayment: "Dec 1, 2024", streamId: "#RB-7732-004", uptime: "90 Days", status: "active", color: "bg-orange-500" },
-];
-
-const catalog: CatalogItem[] = [
-  { name: "Disney+ Standard", fee: 7.99, period: "MONTH", color: "bg-blue-600", category: "entertainment" },
-  { name: "YouTube Premium", fee: 11.99, period: "MONTH", color: "bg-red-500", category: "entertainment" },
-  { name: "Creative Cloud", fee: 52.99, period: "MONTH", color: "bg-red-700", category: "cloud" },
-  { name: "Figma Professional", fee: 15.0, period: "MONTH", color: "bg-purple-600", category: "finance" },
-  { name: "GitHub Pro", fee: 4.0, period: "MONTH", color: "bg-neutral-800", category: "cloud" },
-  { name: "Notion Plus", fee: 8.0, period: "MONTH", color: "bg-neutral-700", category: "cloud" },
-];
-
-const statusBadge: Record<string, string> = {
-  active: "bg-green-100 text-green-700",
-  paused: "bg-amber-100 text-amber-700 uppercase",
-};
-
-type CategoryFilter = "all" | "entertainment" | "cloud" | "finance";
+const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 
 export default function SubscriptionsPage() {
-  const { hasVirtualCard, virtualCardData } = useWallet();
-  const { success, error, info } = useToast();
-  const [subs, setSubs] = useState<Subscription[]>(mockSubs);
+  const { address } = useAccount();
+  const chainId = useChainId();
+  const { hasVirtualCard } = useWallet();
+  const { showToast } = useToast();
+
+  const {
+    subscriptionPlans,
+    userSubscriptions,
+    isLoadingPlans,
+    startSubscription,
+    isSubscribing,
+    subscribeSuccess,
+    pauseSubscription,
+    resumeSubscription,
+    refetchPlans,
+    refetchSubs,
+  } = useSubscription();
+
   const [cardModalOpen, setCardModalOpen] = useState(false);
-  const [pendingSubscribe, setPendingSubscribe] = useState<CatalogItem | null>(null);
+  const [planModalOpen, setPlanModalOpen] = useState(false);
+  const [selectedChannel, setSelectedChannel] =
+    useState<CatalogChannel | null>(null);
+  const [pendingSubscribe, setPendingSubscribe] = useState<{
+    channel: CatalogChannel;
+    tier: SubscriptionPlanTier;
+  } | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
-  const activeSubscriptionsRef = useRef<HTMLDivElement>(null);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const totalMonthly = subs.filter((s) => s.status === "active").reduce((acc, s) => acc + s.fee, 0);
+  const isWrongNetwork = chainId !== ARBITRUM_SEPOLIA_CHAIN_ID;
 
-  const focusActiveSubscriptions = () => {
-    window.setTimeout(() => {
-      activeSubscriptionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 120);
-  };
-
-  const handlePauseResume = async (sub: Subscription) => {
-    setLoadingId(sub.id);
-    await new Promise((resolve) => setTimeout(resolve, 900));
-    setSubs((prev) =>
-      prev.map((item) =>
-        item.id === sub.id ? { ...item, status: item.status === "active" ? "paused" : "active" } : item
+  // Map on-chain subscriptions to lookup set
+  const subscribedNames = useMemo(() => {
+    if (!userSubscriptions) return new Set<string>();
+    return new Set(
+      (userSubscriptions as any[]).map((s: any) =>
+        s.planName?.toLowerCase() || ""
       )
     );
-    success(sub.status === "active" ? "Subscription Paused" : "Subscription Resumed", sub.name);
-    setLoadingId(null);
-  };
+  }, [userSubscriptions]);
 
-  const handleCancel = (sub: Subscription) => {
-    setSubs((prev) => prev.filter((item) => item.id !== sub.id));
-    info("Subscription Cancelled", `${sub.name} has been removed.`);
-  };
+  // Map on-chain plans for lookup
+  const onChainPlanMap = useMemo(() => {
+    if (!subscriptionPlans) return new Map<string, number>();
+    const m = new Map<string, number>();
+    (subscriptionPlans as any[]).forEach((p: any, i: number) => {
+      m.set(p.name?.toLowerCase(), Number(p.planId ?? i));
+    });
+    return m;
+  }, [subscriptionPlans]);
 
-  const doSubscribe = (item: CatalogItem) => {
-    const alreadySubscribed = subs.some((sub) => sub.name === item.name);
-    if (alreadySubscribed) {
-      error("Already Subscribed", `You're already subscribed to ${item.name}.`);
+  // User subscription status lookup
+  const userSubStatus = useMemo(() => {
+    if (!userSubscriptions) return new Map<string, boolean>();
+    const m = new Map<string, boolean>();
+    (userSubscriptions as any[]).forEach((s: any) => {
+      m.set(s.planName?.toLowerCase(), s.active);
+    });
+    return m;
+  }, [userSubscriptions]);
+
+  const monthlyOutflow = useMemo(() => {
+    if (!userSubscriptions) return 0;
+    return (userSubscriptions as any[]).reduce(
+      (sum: number, s: any) => sum + Number(s.fee || 0n) / 1e18,
+      0
+    );
+  }, [userSubscriptions]);
+
+  const filteredChannels = useMemo(() => {
+    return subscriptionChannels.filter((ch) => {
+      const matchesCategory =
+        categoryFilter === "all" || ch.category === categoryFilter;
+      const matchesSearch =
+        !searchQuery ||
+        ch.name.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [categoryFilter, searchQuery]);
+
+  const handleChannelClick = (channel: CatalogChannel) => {
+    if (isWrongNetwork) {
+      showToast(
+        "error",
+        "Wrong Network",
+        "Please switch to Arbitrum Sepolia."
+      );
       return;
     }
-
-    const newSub: Subscription = {
-      id: Date.now().toString(),
-      name: item.name,
-      fee: item.fee,
-      nextPayment: "Next month",
-      streamId: `#RB-${Math.floor(7000 + Math.random() * 1000)}-00${subs.length + 1}`,
-      uptime: "0 Days",
-      status: "active",
-      color: item.color,
-    };
-
-    setSubs((prev) => [...prev, newSub]);
-    success("Subscribed!", `You're now subscribed to ${item.name}.`);
-    focusActiveSubscriptions();
+    setSelectedChannel(channel);
+    setPlanModalOpen(true);
   };
 
-  const handleSubscribe = (item: CatalogItem) => {
+  const handleSelectTier = (channel: CatalogChannel, tier: SubscriptionPlanTier) => {
+    setPlanModalOpen(false);
+
     if (!hasVirtualCard) {
-      setPendingSubscribe(item);
+      setPendingSubscribe({ channel, tier });
       setCardModalOpen(true);
       return;
     }
 
-    if (!virtualCardData?.isActive) {
-      error("Card Inactive", "Reactivate your virtual card from the Card page before starting a new subscription.");
+    doSubscribe(channel, tier);
+  };
+
+  const doSubscribe = async (channel: CatalogChannel, tier: SubscriptionPlanTier) => {
+    if (!address) {
+      showToast("error", "No Wallet", "Please connect your wallet.");
       return;
     }
 
-    doSubscribe(item);
+    setLoadingId(tier.id);
+    try {
+      // Find the on-chain plan that matches this tier
+      const planId = onChainPlanMap.get(tier.id);
+      if (planId === undefined) {
+        showToast(
+          "error",
+          "Plan Not Found",
+          `"${tier.name}" plan not found on-chain. Admin must add it first.`
+        );
+        setLoadingId(null);
+        return;
+      }
+
+      const email = `user@rubbi.finance`;
+      const password = "rubbi-sub";
+      await startSubscription(planId, email, password);
+
+      showToast(
+        "success",
+        "Subscribed!",
+        `You're now subscribed to ${channel.name} ${tier.name}.`
+      );
+      refetchSubs();
+      refetchPlans();
+    } catch (err: any) {
+      showToast("error", "Subscription Failed", err.message || "Transaction failed.");
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const handlePauseResume = async (
+    planName: string,
+    isActive: boolean
+  ) => {
+    if (isWrongNetwork) {
+      showToast("error", "Wrong Network", "Switch to Arbitrum Sepolia.");
+      return;
+    }
+    setLoadingId(planName);
+    try {
+      const planId = onChainPlanMap.get(planName.toLowerCase());
+      if (planId === undefined) {
+        showToast("error", "Plan Not Found", "Could not find on-chain plan ID.");
+        setLoadingId(null);
+        return;
+      }
+
+      if (isActive) {
+        await pauseSubscription(planId);
+        showToast("info", "Paused", `${planName} subscription paused.`);
+      } else {
+        await resumeSubscription(planId);
+        showToast("success", "Resumed", `${planName} subscription resumed.`);
+      }
+      refetchSubs();
+    } catch (err: any) {
+      showToast("error", "Action Failed", err.message || "Transaction failed.");
+    } finally {
+      setLoadingId(null);
+    }
   };
 
   const onCardComplete = () => {
-    if (!pendingSubscribe) return;
-    doSubscribe(pendingSubscribe);
-    setPendingSubscribe(null);
+    if (pendingSubscribe) {
+      doSubscribe(pendingSubscribe.channel, pendingSubscribe.tier);
+      setPendingSubscribe(null);
+    }
   };
 
-  const filteredCatalog =
-    categoryFilter === "all" ? catalog : catalog.filter((item) => item.category === categoryFilter);
-
   return (
-    <div className="space-y-8 animate-fadeIn">
-      <div className="flex items-start justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-extrabold text-neutral-900">Subscriptions</h1>
-          <p className="text-sm text-neutral-500 mt-1">
-            Automating {subs.length} recurring agreement{subs.length !== 1 ? "s" : ""}
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-extrabold text-neutral-900">
+          Subscriptions
+        </h1>
+        <p className="text-sm text-neutral-500 mt-1">
+          Manage your streaming and service subscriptions
+        </p>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-neutral-200 p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+            Active
+          </p>
+          <p className="text-2xl font-extrabold text-primary mt-1">
+            {userSubscriptions
+              ? (userSubscriptions as any[]).filter((s: any) => s.active).length
+              : 0}
+          </p>
+        </div>
+        <div className="bg-white rounded-xl border border-neutral-200 p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+            Monthly Outflow
+          </p>
+          <p className="text-2xl font-extrabold text-primary mt-1">
+            {monthlyOutflow.toFixed(2)} RUB
+          </p>
+        </div>
+        <div className="bg-white rounded-xl border border-neutral-200 p-4">
+          <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">
+            Available Plans
+          </p>
+          <p className="text-2xl font-extrabold text-primary mt-1">
+            {subscriptionChannels.length}
           </p>
         </div>
       </div>
 
-      <div ref={activeSubscriptionsRef}>
-        <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-4">Active Subscriptions</h2>
-
-        {subs[0] && (
-          <div className="bg-white rounded-2xl p-6 border border-neutral-100 mb-4">
-            <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-              <div className="flex items-center gap-4 flex-1 min-w-0">
-                <div className={`w-14 h-14 ${subs[0].color} rounded-xl flex items-center justify-center shrink-0`}>
-                  <span className="text-white font-bold text-xl">{subs[0].name.charAt(0)}</span>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-lg font-bold text-neutral-900">{subs[0].name}</h3>
-                  <p className="text-sm text-neutral-400">Next payment: {subs[0].nextPayment}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-6">
-                <div className="text-right">
-                  <p className="text-2xl font-extrabold text-neutral-900">{subs[0].fee.toFixed(2)}</p>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${statusBadge[subs[0].status]}`}>
-                    {subs[0].status.toUpperCase()}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-6 pt-5 border-t border-neutral-100">
-              <div className="flex gap-6 text-sm">
-                <div>
-                  <p className="text-xs text-neutral-400 mb-0.5">Stream ID</p>
-                  <p className="font-semibold text-neutral-700">{subs[0].streamId}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-neutral-400 mb-0.5">Uptime</p>
-                  <p className="font-semibold text-neutral-700">{subs[0].uptime}</p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outlined"
-                  icon={subs[0].status === "active" ? <Pause size={14} /> : <Play size={14} />}
-                  loading={loadingId === subs[0].id}
-                  onClick={() => handlePauseResume(subs[0])}
+      {/* Active Subscriptions */}
+      {userSubscriptions && (userSubscriptions as any[]).length > 0 && (
+        <div>
+          <h2 className="text-lg font-bold text-neutral-900 mb-3">
+            Your Subscriptions
+          </h2>
+          <div className="space-y-2">
+            {(userSubscriptions as any[]).map((sub: any, i: number) => {
+              const name = sub.planName || "Unknown";
+              const fee = Number(sub.fee || 0n) / 1e18;
+              const isActive = sub.active;
+              return (
+                <div
+                  key={i}
+                  className="bg-white rounded-xl border border-neutral-200 p-4 flex items-center justify-between"
                 >
-                  {subs[0].status === "active" ? "Pause" : "Resume"}
-                </Button>
-                <Button size="sm" variant="danger" icon={<X size={14} />} onClick={() => handleCancel(subs[0])}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <CreditCard size={18} className="text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-neutral-900">{name}</p>
+                      <p className="text-xs text-neutral-500">
+                        {fee.toFixed(2)} RUB/mo
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
+                        isActive
+                          ? "bg-green-100 text-green-700"
+                          : "bg-yellow-100 text-yellow-700"
+                      }`}
+                    >
+                      {isActive ? "Active" : "Paused"}
+                    </span>
+                    <Button
+                      size="sm"
+                      variant={isActive ? "outlined" : "primary"}
+                      loading={loadingId === name.toLowerCase()}
+                      onClick={() => handlePauseResume(name, isActive)}
+                      icon={
+                        isActive ? (
+                          <Pause size={12} />
+                        ) : (
+                          <Play size={12} />
+                        )
+                      }
+                    >
+                      {isActive ? "Pause" : "Resume"}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
+      )}
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {subs.slice(1).map((sub) => (
-            <div key={sub.id} className="bg-white rounded-2xl p-5 border border-neutral-100 hover:shadow-card transition-all">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`w-11 h-11 ${sub.color} rounded-xl flex items-center justify-center`}>
-                  <span className="text-white font-bold">{sub.name.charAt(0)}</span>
-                </div>
-                <div className="text-right">
-                  <p className="text-lg font-extrabold text-neutral-900">{sub.fee.toFixed(2)}</p>
-                  <p className="text-xs font-semibold text-neutral-400">RUB</p>
-                </div>
-              </div>
-              <h3 className="font-bold text-neutral-800 mb-1">{sub.name}</h3>
-              <div className="flex items-center justify-between mb-4">
-                <span className={`text-xs font-bold px-2 py-0.5 rounded-md ${statusBadge[sub.status]}`}>
-                  {sub.status === "paused" ? "ON HOLD" : "ACTIVE"}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                {sub.status === "paused" ? (
-                  <Button size="sm" fullWidth loading={loadingId === sub.id} onClick={() => handlePauseResume(sub)} icon={<Play size={13} />}>
-                    Resume
-                  </Button>
-                ) : (
-                  <Button size="sm" variant="outlined" fullWidth loading={loadingId === sub.id} onClick={() => handlePauseResume(sub)} icon={<Pause size={13} />}>
-                    Pause
-                  </Button>
-                )}
-              </div>
-            </div>
+      {/* Browse Catalog */}
+      <div>
+        <h2 className="text-lg font-bold text-neutral-900 mb-3">
+          Browse Channels
+        </h2>
+
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400"
+            />
+            <input
+              type="text"
+              placeholder="Search channels..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 bg-white border border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all"
+            />
+          </div>
+          {Object.entries(categoryLabels).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setCategoryFilter(key)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                categoryFilter === key
+                  ? "bg-primary text-white"
+                  : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+              }`}
+            >
+              {label}
+            </button>
           ))}
         </div>
-      </div>
 
-      <div className="bg-primary rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-widest text-white/60">Total Outflow (Monthly)</p>
-          <p className="text-3xl font-extrabold text-white mt-1">
-            {totalMonthly.toFixed(2)} <span className="text-lg font-bold text-white/60">RUB</span>
-          </p>
-          <p className="text-xs text-white/50 mt-1">{subs.filter((s) => s.status === "active").length} active streams</p>
-        </div>
-        <div className="bg-white/10 rounded-xl p-4">
-          <p className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-1">Gas Optimization</p>
-          <p className="text-sm text-white/80">Batching {subs.length} subscriptions saved 4.2 RUB this month.</p>
-        </div>
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-          <div>
-            <h2 className="text-xs font-bold uppercase tracking-widest text-neutral-400">Available Catalog</h2>
-            <p className="text-xs text-neutral-400 mt-0.5">Instant Ledger-to-Vendor settlements</p>
+        {/* Channel Grid */}
+        {isLoadingPlans ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 size={24} className="text-primary animate-spin" />
           </div>
-          <div className="flex gap-2">
-            {(["all", "entertainment", "cloud", "finance"] as CategoryFilter[]).map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategoryFilter(cat)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all ${categoryFilter === cat ? "bg-primary text-white" : "bg-white border border-neutral-200 text-neutral-500 hover:border-primary/30"}`}
-              >
-                {cat === "all" ? "All" : cat.charAt(0).toUpperCase() + cat.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredChannels.map((channel) => {
+              const lowestPrice = Math.min(
+                ...channel.tiers.map((t) => t.priceUsd)
+              );
+              const highestPrice = Math.max(
+                ...channel.tiers.map((t) => t.priceUsd)
+              );
+              const lowestRub = Math.min(
+                ...channel.tiers.map((t) => t.priceRub)
+              );
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {filteredCatalog.map((item) => {
-            const subscribed = subs.some((sub) => sub.name === item.name);
-            return (
-              <div key={item.name} className="bg-white rounded-2xl p-5 border border-neutral-100 hover:shadow-card transition-all">
-                <div className={`w-11 h-11 ${item.color} rounded-xl flex items-center justify-center mb-4`}>
-                  <span className="text-white font-bold">{item.name.charAt(0)}</span>
-                </div>
-                <p className="font-bold text-neutral-800 text-sm mb-1">{item.name}</p>
-                <p className="text-xs text-neutral-400 mb-4">
-                  {item.fee.toFixed(2)} RUB / {item.period}
-                </p>
-                <Button
-                  size="sm"
-                  fullWidth
-                  variant={subscribed ? "ghost" : "outlined"}
-                  disabled={subscribed}
-                  onClick={() => handleSubscribe(item)}
+              return (
+                <button
+                  key={channel.id}
+                  type="button"
+                  onClick={() => handleChannelClick(channel)}
+                  className="text-left bg-white rounded-xl border border-neutral-200 p-4 hover:border-primary/40 hover:shadow-md transition-all group"
                 >
-                  {subscribed ? "Subscribed ✓" : "Subscribe"}
-                </Button>
-              </div>
-            );
-          })}
-        </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-neutral-100 flex items-center justify-center shrink-0">
+                      <Image
+                        src={channel.logo}
+                        alt={`${channel.name} logo`}
+                        width={40}
+                        height={40}
+                        className="object-contain"
+                      />
+                    </div>
+                    <div>
+                      <p className="font-bold text-neutral-900 group-hover:text-primary transition-colors">
+                        {channel.name}
+                      </p>
+                      <p className="text-[10px] text-neutral-400 uppercase tracking-wider">
+                        {categoryLabels[channel.category] || channel.category}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-lg font-extrabold text-neutral-900">
+                      ${lowestPrice.toFixed(2)}
+                    </span>
+                    {lowestPrice !== highestPrice && (
+                      <span className="text-xs text-neutral-400">
+                        - ${highestPrice.toFixed(2)}
+                      </span>
+                    )}
+                    <span className="text-xs text-neutral-400">/mo</span>
+                  </div>
+                  <p className="text-xs text-primary font-semibold mt-1">
+                    From {lowestRub.toLocaleString()} RUB/mo
+                  </p>
+                  <div className="flex items-center gap-1 mt-2">
+                    <span className="text-[10px] px-2 py-0.5 bg-neutral-100 text-neutral-500 rounded-full">
+                      {channel.tiers.length} plan
+                      {channel.tiers.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
+      {/* Modals */}
       <VirtualCardModal
         open={cardModalOpen}
         onClose={() => {
@@ -295,6 +428,17 @@ export default function SubscriptionsPage() {
           setPendingSubscribe(null);
         }}
         onComplete={onCardComplete}
+      />
+
+      <SubscriptionPlanModal
+        open={planModalOpen}
+        onClose={() => {
+          setPlanModalOpen(false);
+          setSelectedChannel(null);
+        }}
+        channel={selectedChannel}
+        onSelectTier={handleSelectTier}
+        loading={isSubscribing}
       />
     </div>
   );

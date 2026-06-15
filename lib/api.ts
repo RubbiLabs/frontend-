@@ -117,16 +117,16 @@ export interface Transaction {
 export const api = {
   // Auth
   auth: {
-    register: (walletAddress: string, signature: string) =>
+    register: (walletAddress: string, username: string) =>
       fetchApi<RegisterResponse>("/auth/register", {
         method: "POST",
-        body: JSON.stringify({ walletAddress, signature }),
+        body: JSON.stringify({ walletAddress, username }),
       }),
 
-    login: (walletAddress: string, signature: string) =>
+    login: (walletAddress: string) =>
       fetchApi<LoginResponse>("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ walletAddress, signature }),
+        body: JSON.stringify({ walletAddress }),
       }),
   },
 
@@ -134,20 +134,20 @@ export const api = {
   subscriptions: {
     plans: () => fetchApi<SubscriptionPlan[]>("/subscriptions/plans"),
     me: () => fetchApi<UserSubscription[]>("/subscriptions/me"),
-    start: (planId: number, signature: string) =>
-      fetchApi<{ success: boolean }>("/subscriptions/start", {
+    start: (planId: number, txHash: string) =>
+      fetchApi<{ txHash: string; verified: boolean }>("/subscriptions/start", {
         method: "POST",
-        body: JSON.stringify({ planId, signature }),
+        body: JSON.stringify({ planId, txHash }),
       }),
-    pause: (planId: number, signature: string) =>
-      fetchApi<{ success: boolean }>(`/subscriptions/${planId}/pause`, {
+    pause: (planId: number, txHash: string) =>
+      fetchApi<{ txHash: string; verified: boolean }>(`/subscriptions/${planId}/pause`, {
         method: "POST",
-        body: JSON.stringify({ signature }),
+        body: JSON.stringify({ txHash }),
       }),
-    resume: (planId: number, signature: string) =>
-      fetchApi<{ success: boolean }>(`/subscriptions/${planId}/resume`, {
+    resume: (planId: number, txHash: string) =>
+      fetchApi<{ txHash: string; verified: boolean }>(`/subscriptions/${planId}/resume`, {
         method: "POST",
-        body: JSON.stringify({ signature }),
+        body: JSON.stringify({ txHash }),
       }),
   },
 
@@ -175,6 +175,48 @@ export const api = {
     list: (page = 1, limit = 10) =>
       fetchApi<{ transactions: Transaction[]; total: number }>(
         `/transactions?page=${page}&limit=${limit}`
+      ),
+  },
+
+  // Salary Streaming
+  salaryStreaming: {
+    streams: () =>
+      fetchApi<{ daily: any[]; monthly: any[] }>("/salary-streaming/streams"),
+    stream: (streamId: string) =>
+      fetchApi<any>(`/salary-streaming/streams/${streamId}`),
+    fees: () => fetchApi<{ fees: string }>("/salary-streaming/fees"),
+    create: (txHash: string) =>
+      fetchApi<{ txHash: string; verified: boolean }>(
+        "/salary-streaming/streams",
+        { method: "POST", body: JSON.stringify({ txHash }) }
+      ),
+    pause: (streamId: string, txHash: string) =>
+      fetchApi<{ txHash: string; verified: boolean }>(
+        `/salary-streaming/streams/${streamId}/pause`,
+        { method: "POST", body: JSON.stringify({ txHash }) }
+      ),
+    resume: (streamId: string, txHash: string) =>
+      fetchApi<{ txHash: string; verified: boolean }>(
+        `/salary-streaming/streams/${streamId}/resume`,
+        { method: "POST", body: JSON.stringify({ txHash }) }
+      ),
+    disburse: (txHash: string) =>
+      fetchApi<{ txHash: string; verified: boolean }>(
+        "/salary-streaming/disburse",
+        { method: "POST", body: JSON.stringify({ txHash }) }
+      ),
+  },
+
+  // Faucet
+  faucet: {
+    claim: (txHash: string) =>
+      fetchApi<{ txHash: string; verified: boolean }>("/faucet/claim", {
+        method: "POST",
+        body: JSON.stringify({ txHash }),
+      }),
+    cooldown: () =>
+      fetchApi<{ cooldownSeconds: number; canClaim: boolean }>(
+        "/faucet/cooldown"
       ),
   },
 };

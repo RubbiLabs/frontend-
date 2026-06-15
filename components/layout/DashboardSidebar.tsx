@@ -10,9 +10,10 @@ import {
   Wallet,
   ArrowLeftRight,
 } from "lucide-react";
+import RubbiLogo from "@/components/ui/RubbiLogo";
 
 export const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { href: "/dashboard/subscriptions", label: "Subscriptions", icon: CreditCard },
   { href: "/dashboard/card", label: "Card", icon: RectangleHorizontal },
   { href: "/dashboard/salary-streams", label: "Salary Streams", icon: Repeat2 },
@@ -29,33 +30,16 @@ export default function DashboardSidebar({ onBridgeClick }: DashboardSidebarProp
   return (
     <aside className="hidden lg:flex flex-col w-60 bg-neutral-50 border-r border-neutral-200 shrink-0 h-full">
       {/* Brand */}
-      <div className="p-5 border-b border-neutral-100">
-        <div className="flex items-center gap-0.5">
-          <div className="w-9 h-9 bg-primary rounded-l flex items-center justify-center shadow-sm">
-            <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
-              <path
-                d="M12 8H26C31.523 8 36 12.477 36 18C36 22.072 33.572 25.572 30.08 27.2L36 40H28L22.8 28H20V40H12V8Z"
-                fill="#F7F7F2"
-              />
-              <path
-                d="M20 14V22H26C28.209 22 30 20.209 30 18C30 15.791 28.209 14 26 14H20Z"
-                fill="#22577A"
-              />
-              <circle cx="36" cy="38" r="3" fill="#8C7851" />
-            </svg>
-            {/* <img src="" alt="Rubbi logo" /> */}
-          </div>
-          <div>
-            <p className="font-bold text-primary text-[15px] leading-tight">ubbi Ledger</p>
-            {/* <p className="text-[10px] text-neutral-400 font-semibold tracking-widest uppercase">
-              Monad Network
-            </p> */}
-          </div>
-        </div>
+      <div className="p-5 border-b border-neutral-100 flex items-end">
+        <RubbiLogo size={28} />
+        <span className="text-xl font-bold text-primary">
+                    <span className="text-2xl text-primary-400 font-extrabold">u</span>
+                  bbi
+                  </span>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+      <nav className="flex-1 p-3 space-y-5 overflow-y-auto">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
@@ -63,11 +47,11 @@ export default function DashboardSidebar({ onBridgeClick }: DashboardSidebarProp
               key={href}
               href={href}
               className={`
-                flex items-center gap-3 px-3 py-2.5 rounded-xl text-[11px] font-bold
+                flex items-center gap-3 px-3 py-2.5 rounded-xl text-[12px] font-bold
                 uppercase tracking-widest transition-all duration-150 group
                 ${active
-                  ? "bg-white text-primary shadow-sm"
-                  : "text-neutral-500 hover:bg-white/70 hover:text-neutral-800"
+                  ? "bg-white text-primary shadow-sm border-r-2 border-primary"
+                  : "text-neutral-500 hover:bg-white/70 hover:text-primary hover:border-r-2 border-primary"
                 }
               `}
             >
@@ -85,7 +69,7 @@ export default function DashboardSidebar({ onBridgeClick }: DashboardSidebarProp
         })}
       </nav>
 
-      {/* Bridge Assets CTA */}
+      {/* Swap Assets CTA */}
       <div className="p-4 border-t border-neutral-100">
         <button
           onClick={onBridgeClick}
@@ -98,7 +82,7 @@ export default function DashboardSidebar({ onBridgeClick }: DashboardSidebarProp
           "
         >
           <ArrowLeftRight size={15} />
-          Bridge Assets
+          Swap Assets
         </button>
       </div>
     </aside>

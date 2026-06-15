@@ -4,28 +4,28 @@ import { useSwitchChain, useChainId } from "wagmi";
 import { useToast } from "@/context/ToastContext";
 import { useAccount } from "wagmi";
 
-const MONAD_TESTNET_CHAIN_ID = 10143;
+export const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 
 export function useNetworkSwitch() {
   const { switchChain, isPending } = useSwitchChain();
   const { showToast } = useToast();
   const { isConnected } = useAccount();
   const chainId = useChainId();
-  const isCorrectNetwork = chainId === MONAD_TESTNET_CHAIN_ID;
+  const isCorrectNetwork = chainId === ARBITRUM_SEPOLIA_CHAIN_ID;
 
-  const switchToMonad = () => {
+  const switchToArbitrum = () => {
     try {
-      switchChain({ chainId: MONAD_TESTNET_CHAIN_ID });
+      switchChain({ chainId: ARBITRUM_SEPOLIA_CHAIN_ID });
     } catch (err: unknown) {
-      showToast("error", "Switch Failed", "Please manually switch to Monad Testnet in your wallet");
+      showToast("error", "Switch Failed", "Please manually switch to Arbitrum Sepolia in your wallet");
     }
   };
 
   return {
     isCorrectNetwork,
     isPending,
-    switchToMonad,
-    MONAD_TESTNET_CHAIN_ID,
+    switchToArbitrum,
+    ARBITRUM_SEPOLIA_CHAIN_ID,
     isConnected,
   };
 }

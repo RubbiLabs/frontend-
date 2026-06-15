@@ -4,7 +4,7 @@ import { useNetworkSwitch } from "@/hooks/useNetworkSwitch";
 import { useToast } from "@/context/ToastContext";
 
 export function NetworkBanner() {
-  const { isCorrectNetwork, isPending, switchToMonad, isConnected } = useNetworkSwitch();
+  const { isCorrectNetwork, isPending, switchToArbitrum, isConnected } = useNetworkSwitch();
   const { toast } = useToast();
 
   if (!isConnected || isCorrectNetwork) return null;
@@ -12,11 +12,11 @@ export function NetworkBanner() {
   return (
     <div className="fixed top-0 left-0 right-0 z-50 bg-yellow-500 text-yellow-950 px-4 py-3 flex items-center justify-center gap-4">
       <span className="text-sm font-medium">
-        Wrong network detected. Please switch to Monad Testnet.
+        Wrong network detected. Please switch to Arbitrum Sepolia.
       </span>
       <button
         onClick={() => {
-          switchToMonad();
+          switchToArbitrum();
           toast("info", "Switching", "Please confirm in your wallet");
         }}
         disabled={isPending}

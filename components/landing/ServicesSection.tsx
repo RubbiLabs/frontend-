@@ -53,7 +53,7 @@ const services = [
     icon: <Calendar size={22} className="text-primary" />,
     iconBg: "bg-primary/8",
     title: "Streaming Subscriptions",
-    desc: "Continuous value transfer protocols for modern services. No more billing cycles — just per-second settlement that mirrors real-time consumption.",
+    desc: "Continuous value transfer protocols for modern services. No more billing cycles — just per-second settlement that mirrors real-time consumption on Arbitrum.",
     tags: ["Zero-delay cancellations", "Multi-token support"],
     tagColor: "bg-primary/8 text-primary",
     linkColor: "text-primary hover:text-secondary",
@@ -63,7 +63,7 @@ const services = [
     icon: <DollarSign size={22} className="text-white" />,
     iconBg: "bg-white/10",
     title: "Salary Streams",
-    desc: "Revolutionize payroll with continuous liquidity. Empower your team with real-time access to their earned capital.",
+    desc: "Revolutionize payroll with continuous liquidity on-chain. Empower your team with real-time access to their earned capital, second by second.",
     tags: ["Automated tax withholding", "Global compliance rails"],
     tagColor: "bg-white/10 text-white/80",
     linkColor: "text-white/60 hover:text-white",
@@ -94,19 +94,19 @@ export default function ServicesSection() {
     <>
       {/* ── Foundations strip ── */}
       <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 grid lg:grid-cols-2 gap-16 items-center">
+        <div className="px-6 lg:px-36 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
           <FadeIn>
             <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-3">
               Foundations
             </div>
-            <h2 className="text-4xl lg:text-5xl font-extrabold text-neutral-900 leading-tight mb-6">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-neutral-900 leading-tight mb-6">
               Built for Permanent Trust.
             </h2>
             <p className="text-neutral-500 leading-relaxed text-[15px]">
-              Rubbi isn't just a dApp; it's a digital institution. By leveraging
-              Monad's high-throughput architecture, we provide a tactile ledger
+              Rubbi isn't just a dApp; it's a digital institution. Built on
+              Arbitrum's high-throughput L2, we provide a tactile ledger
               experience that automates complex financial workflows without
-              compromising on decentralisation.
+              compromising on decentralisation or speed.
             </p>
           </FadeIn>
 
@@ -119,13 +119,13 @@ export default function ServicesSection() {
               },
               {
                 icon: <Calendar size={18} className="text-tertiary" />,
-                title: "Monad Powered",
+                title: "Arbitrum Powered",
                 desc: "10,000+ TPS for near-instant transactions and account updates.",
               },
               {
                 icon: <DollarSign size={18} className="text-secondary" />,
                 title: "Unified Wallet",
-                desc: "Your Rubbi identity works across every app in the Monad ecosystem.",
+                desc: "Your Rubbi identity works across every app in the Arbitrum ecosystem.",
               },
             ].map((f) => (
               <div
@@ -152,7 +152,7 @@ export default function ServicesSection() {
             <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-3">
               Our Capabilities
             </div>
-            <h2 className="text-4xl lg:text-5xl font-extrabold text-neutral-900">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-neutral-900">
               The Services Suite
             </h2>
           </FadeIn>
@@ -224,7 +224,7 @@ export default function ServicesSection() {
       <section className="py-24 bg-white">
         <div className="max-w-4xl mx-auto px-6 lg:px-8">
           <FadeIn>
-            <div className="bg-primary rounded-3xl p-12 lg:p-16 text-center relative overflow-hidden">
+            <div className="bg-primary rounded-3xl p-8 sm:p-12 lg:p-16 text-center relative overflow-hidden">
               <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute top-0 right-0 w-72 h-72 rounded-full bg-white/5 translate-x-1/3 -translate-y-1/3" />
                 <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full bg-white/5 -translate-x-1/3 translate-y-1/3" />
@@ -234,8 +234,8 @@ export default function ServicesSection() {
                   Ready to Architect Your Capital?
                 </h2>
                 <p className="text-white/70 text-sm max-w-md mx-auto mb-8 leading-relaxed">
-                  Join thousands who have automated their financial future through
-                  Rubbi's decentralised ledger.
+                  Join builders and teams who are automating their financial
+                  future through Rubbi's on-chain ledger on Arbitrum.
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
                   <Button

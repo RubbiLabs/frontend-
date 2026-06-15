@@ -7,7 +7,10 @@ import CustomDropdown from "../../../components/ui/CustomDropdown";
 import { useToast } from "../../../context/ToastContext";
 import { useSalaryStreaming, StreamDetails } from "@/hooks/useSalaryStreaming";
 import { useNetworkSwitch } from "@/hooks/useNetworkSwitch";
-import { useAccount } from "wagmi";
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import SalaryStreamingABI from "@/Abis/SalaryStreaming.json";
+
+const SALARY_STREAMING_ADDRESS = process.env.NEXT_PUBLIC_SALARY_STREAMING_ADDRESS as `0x${string}`;
 
 type Interval = "Monthly" | "Weekly" | "Daily";
 type StreamStatus = "active" | "paused";
@@ -39,7 +42,7 @@ const intervalOptions = [
 export default function SalaryStreamsPage() {
   const { toast } = useToast();
   const { isConnected } = useAccount();
-  const { isCorrectNetwork, switchToMonad } = useNetworkSwitch();
+  const { isCorrectNetwork, switchToArbitrum } = useNetworkSwitch();
   
   const {
     dailyStreams,
@@ -50,12 +53,21 @@ export default function SalaryStreamsPage() {
     pauseMonthlyStream,
     resumeDailyStream,
     resumeMonthlyStream,
+    refetchDaily,
+    refetchMonthly,
   } = useSalaryStreaming();
 
   const [streams, setStreams] = useState<Stream[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [disburseLoading, setDisburseLoading] = useState(false);
 
+  // Disburse functions: call SalaryStreaming.disburseDaily() and disburseMonthly()
+  const { writeContract: writeDisburseDaily, data: disburseDailyHash, isPending: isDisbursingDaily } = useWriteContract();
+  const { writeContract: writeDisburseMonthly, data: disburseMonthlyHash, isPending: isDisbursingMonthly } = useWriteContract();
+  const { isLoading: isDisburseDailyConfirming } = useWaitForTransactionReceipt({ hash: disburseDailyHash });
+  const { isLoading: isDisburseMonthlyConfirming } = useWaitForTransactionReceipt({ hash: disburseMonthlyHash });
+
+  const [recipientName, setRecipientName] = useState("");
   const [recipient, setRecipient] = useState("");
   const [amount, setAmount] = useState("");
   const [interval, setInterval] = useState<Interval>("Monthly");
@@ -101,7 +113,7 @@ export default function SalaryStreamsPage() {
       return;
     }
     if (!isCorrectNetwork) {
-      toast("error", "Wrong Network", "Please switch to Monad Testnet");
+      toast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
       return;
     }
 
@@ -135,7 +147,11 @@ export default function SalaryStreamsPage() {
       return;
     }
     if (!isCorrectNetwork) {
-      toast("error", "Wrong Network", "Please switch to Monad Testnet");
+      toast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
+      return;
+    }
+    if (!recipientName.trim()) {
+      toast("error", "Missing Recipient Name", "Please enter the recipient's name.");
       return;
     }
     if (!recipient.trim()) {
@@ -149,7 +165,7 @@ export default function SalaryStreamsPage() {
 
     const streamDetails: StreamDetails[] = [
       {
-        name: `Stream to ${formatAddress(recipient)}`,
+        name: recipientName.trim(),
         recipient: recipient as `0x${string}`,
         amount: BigInt(Math.floor(Number(amount) * 1e18)),
       },
@@ -160,7 +176,8 @@ export default function SalaryStreamsPage() {
     setCreateLoading(true);
     try {
       await createStream(streamDetails, intervalType);
-      toast("success", "Stream Created!", `Stream of ${amount} USDC/${interval} initiated.`);
+      toast("success", "Stream Created!", `Stream of ${amount} RUB/${interval} initiated for ${recipientName.trim()}.`);
+      setRecipientName("");
       setRecipient("");
       setAmount("");
     } catch (err: any) {
@@ -170,12 +187,44 @@ export default function SalaryStreamsPage() {
   };
 
   const handleDisburseAll = async () => {
+    if (!isConnected) {
+      toast("error", "Not Connected", "Please connect your wallet first");
+      return;
+    }
+    if (!isCorrectNetwork) {
+      toast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
+      return;
+    }
+
     setDisburseLoading(true);
-    toast("info", "Processing Disbursement...", "Broadcasting to all active streams.");
-    setTimeout(() => {
-      toast("success", "Funds Disbursed!", "All active streams have received their allocation.");
-      setDisburseLoading(false);
-    }, 2000);
+    toast("info", "Processing Disbursement...", "Broadcasting disbursement transactions.");
+
+    try {
+      // Disburse daily streams
+      if (dailyStreams.length > 0) {
+        writeDisburseDaily({
+          address: SALARY_STREAMING_ADDRESS,
+          abi: SalaryStreamingABI.abi,
+          functionName: "disburseDaily",
+        });
+      }
+
+      // Disburse monthly streams
+      if (monthlyStreams.length > 0) {
+        writeDisburseMonthly({
+          address: SALARY_STREAMING_ADDRESS,
+          abi: SalaryStreamingABI.abi,
+          functionName: "disburseMonthly",
+        });
+      }
+
+      toast("success", "Funds Disbursed!", "Disbursement transactions have been broadcast to Arbitrum Sepolia.");
+      await refetchDaily();
+      await refetchMonthly();
+    } catch (err: any) {
+      toast("error", "Disbursement Failed", err.message);
+    }
+    setDisburseLoading(false);
   };
 
   return (
@@ -183,7 +232,7 @@ export default function SalaryStreamsPage() {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl lg:text-3xl font-extrabold text-neutral-900">Salary Streams</h1>
-          <p className="text-sm text-neutral-500 mt-1">Automate your payroll with block-by-block distribution on the Monad ledger.</p>
+          <p className="text-sm text-neutral-500 mt-1">Automate your payroll with block-by-block distribution on the Arbitrum ledger.</p>
         </div>
         <div className="text-right">
           <p className="text-xs font-bold uppercase tracking-widest text-neutral-400">Total Streaming</p>
@@ -199,14 +248,14 @@ export default function SalaryStreamsPage() {
             </div>
             <div>
               <p className="font-semibold text-yellow-800">Wrong Network</p>
-              <p className="text-sm text-yellow-600">Please switch to Monad Testnet to manage streams</p>
+              <p className="text-sm text-yellow-600">Please switch to Arbitrum Sepolia to manage streams</p>
             </div>
           </div>
-          <Button size="sm" onClick={switchToMonad}>Switch to Monad</Button>
+          <Button size="sm" onClick={switchToArbitrum}>Switch to Arbitrum</Button>
         </div>
       )}
 
-      <div className="grid lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-2">
           <div className="bg-white rounded-2xl p-6 border border-neutral-100">
             <div className="flex items-center gap-2 mb-5">
@@ -215,6 +264,17 @@ export default function SalaryStreamsPage() {
             </div>
 
             <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Recipient Name</label>
+                <input
+                  type="text"
+                  placeholder="Alex Rivera"
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                  className="w-full px-4 py-3 bg-neutral-50 border-2 border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all"
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Recipient Address</label>
                 <div className="relative">
@@ -280,51 +340,53 @@ export default function SalaryStreamsPage() {
           </div>
 
           <div className="space-y-3">
-            {streams.map((stream, i) => (
-              <div key={stream.id} className="bg-white rounded-2xl p-5 border border-neutral-100 flex items-center gap-4">
-                <div className={`w-11 h-11 ${avatarColors[i % avatarColors.length]} rounded-xl flex items-center justify-center shrink-0`}>
-                  <span className="text-white text-sm font-bold">{stream.avatar}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="font-bold text-neutral-800 text-sm">{stream.name}</p>
-                    <span className="text-xs text-neutral-400 font-mono">{stream.address}</span>
-                    <span className={`w-2 h-2 rounded-full ${stream.status === "active" ? "bg-green-400" : "bg-amber-400"}`} />
-                    {stream.status === "paused" && <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">PAUSED</span>}
+            {displayStreams.map((stream, i) => (
+              <div key={stream.id} className="bg-white rounded-2xl p-4 sm:p-5 border border-neutral-100">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className={`w-10 h-10 sm:w-11 sm:h-11 ${avatarColors[i % avatarColors.length]} rounded-xl flex items-center justify-center shrink-0`}>
+                    <span className="text-white text-sm font-bold">{stream.avatar}</span>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-neutral-400">
-                    <Clock size={11} />
-                    <span>{stream.interval}</span>
-                    <span>·</span>
-                    <span>{stream.amountPerCycle.toLocaleString()}  RUB / Cycle</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <p className="font-bold text-neutral-800 text-sm">{stream.name}</p>
+                      <span className="text-xs text-neutral-400 font-mono hidden sm:inline">{formatAddress(stream.address)}</span>
+                      <span className={`w-2 h-2 rounded-full ${stream.status === "active" ? "bg-green-400" : "bg-amber-400"}`} />
+                      {stream.status === "paused" && <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-md">PAUSED</span>}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-neutral-400">
+                      <Clock size={11} />
+                      <span>{stream.interval}</span>
+                      <span>·</span>
+                      <span>{stream.amountPerCycle.toLocaleString()} RUB / Cycle</span>
+                    </div>
                   </div>
+                  <div className="text-right shrink-0 hidden sm:block">
+                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Streaming</p>
+                    <p className="text-base font-extrabold text-primary">{stream.streamed.toFixed(2)}</p>
+                  </div>
+                  <button
+                    onClick={() => handlePauseResume(stream)}
+                    disabled={loadingId === stream.id}
+                    className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border transition-all shrink-0 ${
+                      stream.status === "active"
+                        ? "border-neutral-200 text-neutral-400 hover:border-primary hover:text-primary"
+                        : "border-primary/20 text-primary bg-primary/5 hover:bg-primary hover:text-white"
+                    }`}
+                  >
+                    {loadingId === stream.id ? (
+                      <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    ) : stream.status === "active" ? (
+                      <Pause size={14} />
+                    ) : (
+                      <Play size={14} />
+                    )}
+                  </button>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">Streaming</p>
-                  <p className="text-base font-extrabold text-primary">{stream.streamed.toFixed(2)}</p>
-                </div>
-                <button
-                  onClick={() => handlePauseResume(stream)}
-                  disabled={loadingId === stream.id}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-all ${
-                    stream.status === "active"
-                      ? "border-neutral-200 text-neutral-400 hover:border-primary hover:text-primary"
-                      : "border-primary/20 text-primary bg-primary/5 hover:bg-primary hover:text-white"
-                  }`}
-                >
-                  {loadingId === stream.id ? (
-                    <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                  ) : stream.status === "active" ? (
-                    <Pause size={14} />
-                  ) : (
-                    <Play size={14} />
-                  )}
-                </button>
               </div>
             ))}
           </div>
 
-          {/* Monad Stream Consensus */}
+          {/* Arbitrum Stream Settlement */}
           {/* <div className="bg-primary rounded-2xl p-6 text-white relative overflow-hidden">
             <div className="absolute inset-0 pointer-events-none">
               <div className="absolute bottom-0 right-0 w-48 h-48 rounded-full bg-white/5 translate-x-1/3 translate-y-1/3" />
@@ -333,7 +395,7 @@ export default function SalaryStreamsPage() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-widest text-white/50">Network Efficiency</p>
-                  <h3 className="text-lg font-extrabold mt-1">Monad Stream Consensus</h3>
+                  <h3 className="text-lg font-extrabold mt-1">Arbitrum Stream Settlement</h3>
                 </div>
                 <Zap size={24} className="text-white/20" />
               </div>
@@ -358,7 +420,7 @@ export default function SalaryStreamsPage() {
       <div className="flex justify-end">
         <Button 
           size="lg" 
-          loading={disburseLoading} 
+          loading={disburseLoading || isDisbursingDaily || isDisbursingMonthly || isDisburseDailyConfirming || isDisburseMonthlyConfirming}
           icon={<RefreshCw size={16} />} 
           iconPosition="right" 
           onClick={handleDisburseAll}
