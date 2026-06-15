@@ -3,26 +3,18 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, Shield, Wallet, Zap, ArrowUpRight, Repeat } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
-import { useToast } from "@/context/ToastContext";
 import Button from "@/components/ui/Button";
 
 export default function HeroSection() {
   const router = useRouter();
-  const { isConnected, connect, isConnecting } = useWallet();
-  const { success, error } = useToast();
+  const { isConnected, isConnecting } = useWallet();
 
   const handleConnect = async () => {
-    try {
-      if (isConnected) {
-        router.push("/dashboard");
-        return;
-      }
-      await connect();
-      success("Wallet Connected!", "Redirecting to dashboard...");
+    if (isConnected) {
       router.push("/dashboard");
-    } catch {
-      error("Connection Failed", "Please try again or install MetaMask.");
+      return;
     }
+    router.push("/onboarding");
   };
 
   return (
