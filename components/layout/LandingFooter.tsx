@@ -3,32 +3,21 @@ import React from "react";
 import Link from "next/link";
 import { useWallet } from "@/context/WalletContext";
 import RubbiLogo from "@/components/ui/RubbiLogo";
+import { FileText } from "lucide-react";
 
 export default function LandingFooter() {
   const year = new Date().getFullYear();
   const { isConnected } = useWallet();
   const logoHref = isConnected ? "/dashboard" : "/";
 
-  const protocol = [
-    { label: "Dashboard", href: "/dashboard" },
-    { label: "Subscriptions", href: "/dashboard/subscriptions" },
-    { label: "Salary Streams", href: "/dashboard/salary-streams" },
-    { label: "Wallet Connect", href: isConnected ? "/dashboard/wallet" : "/" },
-  ];
 
-  const connect = [
-    { label: "Documentation", href: "#" },
-    { label: "Github", href: "#" },
-    { label: "Twitter", href: "#" },
-    { label: "Support", href: "#" },
-  ];
 
   return (
     <footer className="bg-neutral-50 border-t border-neutral-200">
       <div className="px-6 lg:px-36 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Brand */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <Link href={logoHref} className="flex items-end mb-5">
                         <RubbiLogo size={28} />
                         <span className="text-xl font-bold text-primary">
@@ -49,37 +38,15 @@ export default function LandingFooter() {
             </div>
           </div>
 
-          {/* Protocol links */}
+          {/* Documentation link */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-4">Protocol</h4>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-4">Resources</h4>
             <ul className="space-y-3">
-              {protocol.map((l) => (
-                <li key={l.label}>
-                  <Link
-                    href={l.href}
-                    className="text-sm text-neutral-600 hover:text-primary transition-colors font-medium"
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Connect links */}
-          <div>
-            <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-4">Connect</h4>
-            <ul className="space-y-3">
-              {connect.map((l) => (
-                <li key={l.label}>
-                  <Link
-                    href={l.href}
-                    className="text-sm text-neutral-600 hover:text-primary transition-colors font-medium"
-                  >
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
+              <li>
+                <Link href="/docs" className="text-sm text-neutral-600 hover:text-primary transition-colors font-medium flex items-center gap-2">
+                  <FileText size={14} /> Documentation
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
@@ -91,8 +58,7 @@ export default function LandingFooter() {
             © {year} Rubbi Financial Automation. All rights reserved.
           </p>
           <div className="flex items-center gap-5">
-            <Link href="#" className="text-xs text-neutral-400 hover:text-primary transition-colors">Privacy Policy</Link>
-            <Link href="#" className="text-xs text-neutral-400 hover:text-primary transition-colors">Terms of Service</Link>
+            <Link href="/docs" className="text-xs text-neutral-400 hover:text-primary transition-colors">Documentation</Link>
           </div>
         </div>
       </div>

@@ -43,6 +43,7 @@ export default function LandingNavbar() {
         { href: "/", label: "Home" },
         { href: "/about", label: "About" },
         { href: "/services", label: "Services" },
+        { href: "/docs", label: "Docs" },
       ];
 
   const isActive = (href: string) => pathname === href;

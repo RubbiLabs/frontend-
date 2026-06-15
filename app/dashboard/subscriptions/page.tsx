@@ -252,6 +252,19 @@ export default function SubscriptionsPage() {
         </div>
       </div>
 
+      {/* Empty state for no subscriptions */}
+      {(!userSubscriptions || (userSubscriptions as any[]).length === 0) && (
+        <div className="bg-white rounded-2xl border border-neutral-100 p-8 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <CreditCard size={24} className="text-primary" />
+          </div>
+          <h3 className="text-lg font-extrabold text-neutral-900">No Active Subscriptions</h3>
+          <p className="text-sm text-neutral-500 mt-2 max-w-md mx-auto">
+            You haven't subscribed to any channels yet. Browse the catalog below to find streaming services, tools, and platforms to subscribe to.
+          </p>
+        </div>
+      )}
+
       {/* Active Subscriptions */}
       {userSubscriptions && (userSubscriptions as any[]).length > 0 && (
         <div>

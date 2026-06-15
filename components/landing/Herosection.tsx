@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CreditCard, Shield, Wallet, Zap, ArrowUpRight, Repeat } from "lucide-react";
+import { CreditCard, Shield, Wallet, Zap, ArrowUpRight, Repeat } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
 import Button from "@/components/ui/Button";
@@ -65,15 +65,9 @@ export default function HeroSection() {
               loading={isConnecting}
               onClick={handleConnect}
             >
-              {isConnected ? "Go to Dashboard" : "Connect Wallet"}
+              {isConnected ? "Go to Dashboard" : "Begin Automation"}
             </Button>
-            <Button
-              size="lg"
-              variant="outlined"
-              onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
-            >
-              Learn More <ArrowRight size={16} className="ml-1" />
-            </Button>
+
           </div>
 
           {/* Trust badges */}

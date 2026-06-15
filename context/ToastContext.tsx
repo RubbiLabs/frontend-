@@ -55,14 +55,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
 function ToastContainer({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: string) => void }) {
   const icons: Record<ToastType, React.ReactNode> = {
-    success: <CheckCircle size={18} className="text-green-500" />,
+    success: <CheckCircle size={18} className="text-[#22577A]" />,
     error: <XCircle size={18} className="text-red-500" />,
     warning: <AlertTriangle size={18} className="text-amber-500" />,
     info: <Info size={18} className="text-blue-500" />,
   };
 
   const colors: Record<ToastType, string> = {
-    success: "border-l-green-500",
+    success: "border-l-[#22577A]",
     error: "border-l-red-500",
     warning: "border-l-amber-500",
     info: "border-l-blue-500",

@@ -3,9 +3,10 @@ import React, { useMemo, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, CreditCard, RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
 import Button from "@/components/ui/Button";
+import Modal from "@/components/ui/Modal";
 import { useWallet } from "@/context/WalletContext";
 import { useToast } from "@/context/ToastContext";
-import { subscriptionChannels, type CatalogChannel } from "@/lib/subscriptions";
+import { subscriptionChannels } from "@/lib/subscriptions";
 
 const cardStatusBadge: Record<string, string> = {
   active: "bg-green-100 text-green-700",
@@ -20,6 +21,7 @@ export default function CardPage() {
   const { hasVirtualCard, virtualCardData, setVirtualCardActive } = useWallet();
   const { info, success } = useToast();
   const [page, setPage] = useState(1);
+  const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
 
   const toggleCardStatus = () => {
     if (!virtualCardData) return;
@@ -198,7 +200,11 @@ export default function CardPage() {
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
                   {visibleSubscriptions.map((subscription) => (
-                    <tr key={subscription.id} className="hover:bg-neutral-50/70 transition-colors">
+                    <tr 
+                      key={subscription.id} 
+                      className="hover:bg-neutral-50/70 transition-colors cursor-pointer"
+                      onClick={() => setSelectedSubscription(subscription)}
+                    >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-neutral-100 shrink-0">
@@ -267,6 +273,65 @@ export default function CardPage() {
           </div>
         )}
       </div>
+
+      {/* Subscription Detail Modal */}
+      <Modal
+        open={!!selectedSubscription}
+        onClose={() => setSelectedSubscription(null)}
+        title="Subscription Details"
+        subtitle={selectedSubscription?.name}
+        size="md"
+      >
+        {selectedSubscription && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-neutral-100 shrink-0">
+                <Image src={selectedSubscription.logo} alt={`${selectedSubscription.name} logo`} fill className="object-cover" sizes="56px" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-neutral-900">{selectedSubscription.name}</h3>
+                <p className="text-sm text-neutral-500">{selectedSubscription.plan}</p>
+              </div>
+            </div>
+
+            <div className="bg-neutral-50 rounded-xl p-4 space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-neutral-500">Monthly Fee</span>
+                <span className="text-sm font-bold text-neutral-900">{selectedSubscription.fee.toFixed(2)} RUB</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-neutral-500">Status</span>
+                <span className={`text-sm font-bold ${selectedSubscription.status === "active" ? "text-green-600" : selectedSubscription.status === "paused" ? "text-amber-600" : "text-neutral-600"}`}>
+                  {selectedSubscription.status}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-neutral-500">Next Payment</span>
+                <span className="text-sm font-bold text-neutral-900">{selectedSubscription.nextPayment}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-neutral-500">Card</span>
+                <span className="text-sm font-bold text-neutral-900">•••• {selectedSubscription.cardLastFour}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-neutral-500">Stream ID</span>
+                <span className="text-sm font-mono text-neutral-600">{selectedSubscription.streamId}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                size="lg"
+                variant="ghost"
+                onClick={() => setSelectedSubscription(null)}
+                className="flex-1"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

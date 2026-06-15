@@ -319,7 +319,7 @@ export default function ServicesPage() {
 						</h2>
 						<p className='text-neutral-500 mb-8'>
 							Join builders and teams who have automated their financial
-							future through Rubbi's on-chain ledger on Arbitrum.
+							future through Rubbi&apos;s on-chain ledger on Arbitrum.
 						</p>
 						<div className='flex flex-wrap justify-center gap-3'>
 							<Button
@@ -327,13 +327,13 @@ export default function ServicesPage() {
 								icon={<Wallet size={18} />}
 								loading={isConnecting}
 								onClick={handleConnect}>
-								Connect Wallet
+								Begin Automation
 							</Button>
-							<Button
-								size='lg'
-								variant='outlined'>
+							<Link
+								href="/docs"
+								className='inline-flex items-center gap-2 px-7 py-3.5 bg-white/10 text-white rounded-xl text-base font-semibold border border-white/20 hover:bg-white/20 transition-all'>
 								View Documentation
-							</Button>
+							</Link>
 						</div>
 					</FadeIn>
 				</div>

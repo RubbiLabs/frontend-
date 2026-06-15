@@ -245,10 +245,10 @@ export default function ServicesSection() {
                     loading={isConnecting}
                     onClick={handleConnect}
                   >
-                    Connect Wallet
+                    Begin Automation
                   </Button>
                   <Link
-                    href="/services"
+                    href="/docs"
                     className="inline-flex items-center gap-2 px-7 py-3.5 bg-white/10 text-white rounded-xl text-base font-semibold border border-white/20 hover:bg-white/20 transition-all"
                   >
                     View Documentation

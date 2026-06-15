@@ -12,6 +12,8 @@ import RouterABI from "@/Abis/UniswapV2Router02.json";
 import ERC20ABI from "@/Abis/ERC20.json";
 import type { SwapToken } from "@/types";
 import { useToast } from "@/context/ToastContext";
+import { useZeroDev } from "@/context/ZeroDevContext";
+import { trackSwapEvent, trackTransaction } from "@/components/dashboard/DuneAnalytics";
 
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 const UNISWAP_V2_ROUTER =
@@ -31,6 +33,7 @@ export function useSwap() {
   const { address } = useAccount();
   const chainId = useChainId();
   const { showToast } = useToast();
+  const { kernelClient, isReady: isZeroDevReady } = useZeroDev();
 
   const [inputToken, setInputToken] = useState<SwapToken>("ETH");
   const [inputAmount, setInputAmount] = useState("");
@@ -135,16 +138,27 @@ export function useSwap() {
   const approve = useCallback(async () => {
     if (!arbAddress || !UNISWAP_V2_ROUTER) return;
     try {
-      writeApprove({
-        address: arbAddress,
-        abi: ERC20ABI.abi,
-        functionName: "approve",
-        args: [UNISWAP_V2_ROUTER, maxUint256],
-      });
+      if (kernelClient && isZeroDevReady) {
+        const client = kernelClient as any;
+        const hash = await client.writeContract({
+          address: arbAddress,
+          abi: ERC20ABI.abi,
+          functionName: "approve",
+          args: [UNISWAP_V2_ROUTER, maxUint256],
+        });
+        await client.waitForUserOperationReceipt({ hash, timeout: 120_000 });
+      } else {
+        writeApprove({
+          address: arbAddress,
+          abi: ERC20ABI.abi,
+          functionName: "approve",
+          args: [UNISWAP_V2_ROUTER, maxUint256],
+        });
+      }
     } catch (err: any) {
       showToast("error", "Approval Failed", err.message);
     }
-  }, [arbAddress, writeApprove, showToast]);
+  }, [arbAddress, writeApprove, showToast, kernelClient, isZeroDevReady]);
 
   const swap = useCallback(async () => {
     if (!address || !UNISWAP_V2_ROUTER || !RUB_TOKEN_ADDRESS) return;
@@ -156,23 +170,45 @@ export function useSwap() {
     const deadline = toDeadline(600); // 10 minutes
 
     try {
-      if (inputToken === "ETH") {
-        // ETH → RUB
-        writeSwap({
-          address: UNISWAP_V2_ROUTER,
-          abi: RouterABI.abi,
-          functionName: "swapExactETHForTokens",
-          args: [minOutput, swapPath, address, deadline],
-          value: inputAmountBigInt,
-        });
+      if (kernelClient && isZeroDevReady) {
+        // ZeroDev gasless path
+        const client = kernelClient as any;
+        if (inputToken === "ETH") {
+          const hash = await client.writeContract({
+            address: UNISWAP_V2_ROUTER,
+            abi: RouterABI.abi,
+            functionName: "swapExactETHForTokens",
+            args: [minOutput, swapPath, address, deadline],
+            value: inputAmountBigInt,
+          });
+          await client.waitForUserOperationReceipt({ hash, timeout: 120_000 });
+        } else {
+          const hash = await client.writeContract({
+            address: UNISWAP_V2_ROUTER,
+            abi: RouterABI.abi,
+            functionName: "swapExactTokensForTokens",
+            args: [inputAmountBigInt, minOutput, swapPath, address, deadline],
+          });
+          await client.waitForUserOperationReceipt({ hash, timeout: 120_000 });
+        }
       } else {
-        // ARB → RUB
-        writeSwap({
-          address: UNISWAP_V2_ROUTER,
-          abi: RouterABI.abi,
-          functionName: "swapExactTokensForTokens",
-          args: [inputAmountBigInt, minOutput, swapPath, address, deadline],
-        });
+        // Fallback to wagmi (non-gasless)
+        if (inputToken === "ETH") {
+          writeSwap({
+            address: UNISWAP_V2_ROUTER,
+            abi: RouterABI.abi,
+            functionName: "swapExactETHForTokens",
+            args: [minOutput, swapPath, address, deadline],
+            value: inputAmountBigInt,
+          });
+        } else {
+          writeSwap({
+            address: UNISWAP_V2_ROUTER,
+            abi: RouterABI.abi,
+            functionName: "swapExactTokensForTokens",
+            args: [inputAmountBigInt, minOutput, swapPath, address, deadline],
+          });
+        }
       }
     } catch (err: any) {
       showToast("error", "Swap Failed", err.message);
@@ -186,12 +222,19 @@ export function useSwap() {
     swapPath,
     writeSwap,
     showToast,
+    kernelClient,
+    isZeroDevReady,
   ]);
 
   // Auto-clear input on success
   useEffect(() => {
     if (isSwapSuccess) {
       setInputAmount("");
+      const outputAmount = Number(estimatedOutput) / 1e18;
+      if (outputAmount > 0) {
+        trackSwapEvent(outputAmount * 50);
+      }
+      trackTransaction();
       showToast(
         "success",
         "Swap Complete!",

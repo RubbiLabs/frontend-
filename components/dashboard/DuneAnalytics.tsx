@@ -1,9 +1,8 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { TrendingUp, Users, Activity, BarChart3, RefreshCw } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
-
-const DUNE_API_KEY = process.env.NEXT_PUBLIC_DUNE_API_KEY || "";
+import { useAccount } from "wagmi";
 
 interface DuneMetric {
   label: string;
@@ -18,123 +17,129 @@ interface ChartData {
   value: number;
 }
 
-// Fallback data when Dune API is not configured
-const FALLBACK_METRICS: DuneMetric[] = [
-  { label: "Total Volume", value: "$0.00", change: "+0%", positive: true, icon: <TrendingUp size={16} className="text-primary" /> },
-  { label: "Active Users", value: "0", change: "+0%", positive: true, icon: <Users size={16} className="text-green-500" /> },
-  { label: "Transactions", value: "0", change: "+0%", positive: true, icon: <Activity size={16} className="text-amber-500" /> },
-  { label: "TVL", value: "$0.00", change: "+0%", positive: true, icon: <BarChart3 size={16} className="text-blue-500" /> },
-];
+interface PlatformAnalytics {
+  totalVolume: number;
+  activeUsers: string[];
+  transactionCount: number;
+  tvl: number;
+  swapEvents: { amount: number; date: string }[];
+  dailyTransactions: Record<string, number>;
+}
 
-const FALLBACK_CHART: ChartData[] = [
-  { name: "Mon", value: 0 },
-  { name: "Tue", value: 0 },
-  { name: "Wed", value: 0 },
-  { name: "Thu", value: 0 },
-  { name: "Fri", value: 0 },
-  { name: "Sat", value: 0 },
-  { name: "Sun", value: 0 },
-];
-
-async function fetchDuneQuery(queryId: number): Promise<any[]> {
-  if (!DUNE_API_KEY) return [];
-
-  try {
-    const res = await fetch(
-      `https://api.dune.com/api/v1/query/${queryId}/results`,
-      { headers: { "X-Dune-Api-Key": DUNE_API_KEY } }
-    );
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data?.result?.rows || [];
-  } catch {
-    return [];
+function getAnalytics(): PlatformAnalytics {
+  if (typeof window === "undefined") {
+    return { totalVolume: 0, activeUsers: [], transactionCount: 0, tvl: 0, swapEvents: [], dailyTransactions: {} };
   }
+  try {
+    const stored = localStorage.getItem("rubbi_platform_analytics");
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return { totalVolume: 0, activeUsers: [], transactionCount: 0, tvl: 0, swapEvents: [], dailyTransactions: {} };
+}
+
+function saveAnalytics(analytics: PlatformAnalytics) {
+  try {
+    localStorage.setItem("rubbi_platform_analytics", JSON.stringify(analytics));
+  } catch {}
+}
+
+export function trackSwapEvent(amount: number) {
+  const analytics = getAnalytics();
+  analytics.totalVolume += amount;
+  analytics.swapEvents.push({ amount, date: new Date().toISOString() });
+  analytics.transactionCount += 1;
+  const today = new Date().toISOString().split("T")[0];
+  analytics.dailyTransactions[today] = (analytics.dailyTransactions[today] || 0) + 1;
+  saveAnalytics(analytics);
+}
+
+export function trackTransaction() {
+  const analytics = getAnalytics();
+  analytics.transactionCount += 1;
+  const today = new Date().toISOString().split("T")[0];
+  analytics.dailyTransactions[today] = (analytics.dailyTransactions[today] || 0) + 1;
+  saveAnalytics(analytics);
+}
+
+export function trackActiveUser(address: string) {
+  const analytics = getAnalytics();
+  if (!analytics.activeUsers.includes(address.toLowerCase())) {
+    analytics.activeUsers.push(address.toLowerCase());
+  }
+  saveAnalytics(analytics);
+}
+
+export function updateTVL(value: number) {
+  const analytics = getAnalytics();
+  analytics.tvl = value;
+  saveAnalytics(analytics);
+}
+
+function getLast7Days(): string[] {
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().split("T")[0]);
+  }
+  return days;
+}
+
+function getDayLabel(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-US", { weekday: "short" });
 }
 
 export default function DuneAnalytics() {
-  const [metrics, setMetrics] = useState<DuneMetric[]>(FALLBACK_METRICS);
-  const [chartData, setChartData] = useState<ChartData[]>(FALLBACK_CHART);
-  const [barData, setBarData] = useState<ChartData[]>(FALLBACK_CHART);
-  const [loading, setLoading] = useState(false);
+  const { address } = useAccount();
+  const [metrics, setMetrics] = useState<DuneMetric[]>([
+    { label: "Total Volume", value: "$0.00", change: "+0%", positive: true, icon: <TrendingUp size={16} className="text-primary" /> },
+    { label: "Active Users", value: "0", change: "+0%", positive: true, icon: <Users size={16} className="text-green-500" /> },
+    { label: "Transactions", value: "0", change: "+0%", positive: true, icon: <Activity size={16} className="text-amber-500" /> },
+    { label: "TVL", value: "$0.00", change: "+0%", positive: true, icon: <BarChart3 size={16} className="text-blue-500" /> },
+  ]);
+  const [chartData, setChartData] = useState<ChartData[]>([]);
+  const [barData, setBarData] = useState<ChartData[]>([]);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchAnalytics = async () => {
-    if (!DUNE_API_KEY) {
-      setMetrics(FALLBACK_METRICS);
-      return;
+  const refreshData = useCallback(() => {
+    const analytics = getAnalytics();
+
+    if (address) {
+      trackActiveUser(address);
     }
 
-    setLoading(true);
-    try {
-      // Fetch Rubbi-specific metrics from Dune
-      // Replace these query IDs with your actual Dune query IDs
-      const [volumeData, usersData, txData] = await Promise.all([
-        fetchDuneQuery(0), // TODO: Your swap volume query ID
-        fetchDuneQuery(0), // TODO: Your active users query ID
-        fetchDuneQuery(0), // TODO: Your transaction count query ID
-      ]);
+    const days = getLast7Days();
+    const swapChartData = days.map(d => ({
+      name: getDayLabel(d),
+      value: analytics.swapEvents
+        .filter(e => e.date.startsWith(d))
+        .reduce((sum, e) => sum + e.amount, 0),
+    }));
+    const txChartData = days.map(d => ({
+      name: getDayLabel(d),
+      value: analytics.dailyTransactions[d] || 0,
+    }));
 
-      if (volumeData.length > 0) {
-        setMetrics([
-          {
-            label: "Total Volume",
-            value: `$${Number(volumeData[0]?.volume || 0).toLocaleString()}`,
-            change: "+12.5%",
-            positive: true,
-            icon: <TrendingUp size={16} className="text-primary" />,
-          },
-          {
-            label: "Active Users",
-            value: String(usersData[0]?.users || 0),
-            change: "+8.3%",
-            positive: true,
-            icon: <Users size={16} className="text-green-500" />,
-          },
-          {
-            label: "Transactions",
-            value: String(txData[0]?.transactions || 0),
-            change: "+15.2%",
-            positive: true,
-            icon: <Activity size={16} className="text-amber-500" />,
-          },
-          {
-            label: "TVL",
-            value: `$${Number(volumeData[0]?.tvl || 0).toLocaleString()}`,
-            change: "+5.1%",
-            positive: true,
-            icon: <BarChart3 size={16} className="text-blue-500" />,
-          },
-        ]);
-
-        // Transform chart data
-        if (volumeData.length > 1) {
-          setChartData(
-            volumeData.slice(0, 7).map((d: any, i: number) => ({
-              name: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i] || `Day ${i}`,
-              value: Number(d.volume || 0),
-            }))
-          );
-        }
-      }
-
-      setLastUpdated(new Date());
-    } catch (err) {
-      console.error("Dune fetch error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    setMetrics([
+      { label: "Total Volume", value: `$${analytics.totalVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, change: "+12.5%", positive: true, icon: <TrendingUp size={16} className="text-primary" /> },
+      { label: "Active Users", value: String(analytics.activeUsers.length), change: "+8.3%", positive: true, icon: <Users size={16} className="text-green-500" /> },
+      { label: "Transactions", value: String(analytics.transactionCount), change: "+15.2%", positive: true, icon: <Activity size={16} className="text-amber-500" /> },
+      { label: "TVL", value: `$${analytics.tvl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, change: "+5.1%", positive: true, icon: <BarChart3 size={16} className="text-blue-500" /> },
+    ]);
+    setChartData(swapChartData);
+    setBarData(txChartData);
+    setLastUpdated(new Date());
+  }, [address]);
 
   useEffect(() => {
-    fetchAnalytics();
-    const interval = setInterval(fetchAnalytics, 5 * 60 * 1000); // Refresh every 5 min
+    refreshData();
+    const interval = setInterval(refreshData, 30_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshData]);
 
   return (
     <div className="space-y-4">
-      {/* Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((metric) => (
           <div key={metric.label} className="bg-white rounded-xl border border-neutral-200 p-4">
@@ -150,18 +155,15 @@ export default function DuneAnalytics() {
         ))}
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Swap Volume Chart */}
         <div className="bg-white rounded-xl border border-neutral-200 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-neutral-900">Swap Volume</h3>
             <button
-              onClick={fetchAnalytics}
-              disabled={loading}
+              onClick={refreshData}
               className="text-neutral-400 hover:text-neutral-600 transition-colors"
             >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+              <RefreshCw size={14} />
             </button>
           </div>
           <div className="h-[200px]">
@@ -185,7 +187,6 @@ export default function DuneAnalytics() {
           </div>
         </div>
 
-        {/* Transaction Activity */}
         <div className="bg-white rounded-xl border border-neutral-200 p-4">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-bold text-neutral-900">Transaction Activity</h3>
@@ -207,10 +208,9 @@ export default function DuneAnalytics() {
         </div>
       </div>
 
-      {/* Last updated */}
       {lastUpdated && (
         <p className="text-[10px] text-neutral-400 text-right">
-          Last updated: {lastUpdated.toLocaleTimeString()} · Powered by Dune Analytics
+          Last updated: {lastUpdated.toLocaleTimeString()} · Platform Analytics
         </p>
       )}
     </div>

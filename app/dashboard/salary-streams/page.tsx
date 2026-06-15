@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Plus, Pause, Play, RefreshCw, Zap, Clock } from "lucide-react";
 import Button from "../../../components/ui/Button";
 import CustomDropdown from "../../../components/ui/CustomDropdown";
+import Modal from "../../../components/ui/Modal";
 import { useToast } from "../../../context/ToastContext";
 import { useSalaryStreaming, StreamDetails } from "@/hooks/useSalaryStreaming";
 import { useNetworkSwitch } from "@/hooks/useNetworkSwitch";
@@ -72,6 +73,7 @@ export default function SalaryStreamsPage() {
   const [amount, setAmount] = useState("");
   const [interval, setInterval] = useState<Interval>("Monthly");
   const [createLoading, setCreateLoading] = useState(false);
+  const [selectedStream, setSelectedStream] = useState<Stream | null>(null);
 
   const allContractStreams = [
     ...dailyStreams.map((s: any, i: number) => ({
@@ -163,11 +165,12 @@ export default function SalaryStreamsPage() {
       return;
     }
 
+    const rubAmount = Number(amount) * 50; // USD to RUB conversion
     const streamDetails: StreamDetails[] = [
       {
         name: recipientName.trim(),
         recipient: recipient as `0x${string}`,
-        amount: BigInt(Math.floor(Number(amount) * 1e18)),
+        amount: BigInt(Math.floor(rubAmount * 1e18)),
       },
     ];
 
@@ -176,7 +179,7 @@ export default function SalaryStreamsPage() {
     setCreateLoading(true);
     try {
       await createStream(streamDetails, intervalType);
-      toast("success", "Stream Created!", `Stream of ${amount} RUB/${interval} initiated for ${recipientName.trim()}.`);
+      toast("success", "Stream Created!", `Stream of ${rubAmount} RUB/${interval} initiated for ${recipientName.trim()}.`);
       setRecipientName("");
       setRecipient("");
       setAmount("");
@@ -293,7 +296,7 @@ export default function SalaryStreamsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Amount</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Amount (USD)</label>
                   <div className="relative">
                     <input
                       type="number"
@@ -302,8 +305,9 @@ export default function SalaryStreamsPage() {
                       onChange={(e) => setAmount(e.target.value)}
                       className="w-full px-4 py-3 pr-16 bg-neutral-50 border-2 border-neutral-200 rounded-xl text-sm focus:outline-none focus:border-primary transition-all"
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400">RUB</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-400">USD</span>
                   </div>
+                  <p className="text-[10px] text-neutral-400 mt-1">Converted to RUB at 1 USD = 50 RUB</p>
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-neutral-400 mb-2">Interval</label>
@@ -340,8 +344,23 @@ export default function SalaryStreamsPage() {
           </div>
 
           <div className="space-y-3">
+            {displayStreams.length === 0 && (
+              <div className="bg-white rounded-2xl border border-neutral-100 p-8 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Zap size={24} className="text-primary" />
+                </div>
+                <h3 className="text-lg font-extrabold text-neutral-900">No Active Streams</h3>
+                <p className="text-sm text-neutral-500 mt-2 max-w-md mx-auto">
+                  You haven't created any salary streams yet. Use the form on the left to create your first automated salary stream.
+                </p>
+              </div>
+            )}
             {displayStreams.map((stream, i) => (
-              <div key={stream.id} className="bg-white rounded-2xl p-4 sm:p-5 border border-neutral-100">
+              <div 
+                key={stream.id} 
+                className="bg-white rounded-2xl p-4 sm:p-5 border border-neutral-100 cursor-pointer hover:border-primary/30 transition-all"
+                onClick={() => setSelectedStream(stream)}
+              >
                 <div className="flex items-center gap-3 sm:gap-4">
                   <div className={`w-10 h-10 sm:w-11 sm:h-11 ${avatarColors[i % avatarColors.length]} rounded-xl flex items-center justify-center shrink-0`}>
                     <span className="text-white text-sm font-bold">{stream.avatar}</span>
@@ -365,7 +384,10 @@ export default function SalaryStreamsPage() {
                     <p className="text-base font-extrabold text-primary">{stream.streamed.toFixed(2)}</p>
                   </div>
                   <button
-                    onClick={() => handlePauseResume(stream)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePauseResume(stream);
+                    }}
                     disabled={loadingId === stream.id}
                     className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center border transition-all shrink-0 ${
                       stream.status === "active"
@@ -429,6 +451,65 @@ export default function SalaryStreamsPage() {
           Disburse All Funds
         </Button>
       </div>
+
+      {/* Stream Detail Modal */}
+      <Modal
+        open={!!selectedStream}
+        onClose={() => setSelectedStream(null)}
+        title="Stream Details"
+        subtitle={selectedStream?.name}
+        size="md"
+      >
+        {selectedStream && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className={`w-14 h-14 ${avatarColors[0]} rounded-2xl flex items-center justify-center shrink-0`}>
+                <span className="text-white text-lg font-bold">{selectedStream.avatar}</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-neutral-900">{selectedStream.name}</h3>
+                <p className="text-sm text-neutral-500 font-mono">{formatAddress(selectedStream.address)}</p>
+              </div>
+            </div>
+
+            <div className="bg-neutral-50 rounded-xl p-4 space-y-3">
+              <div className="flex justify-between">
+                <span className="text-sm text-neutral-500">Amount per Cycle</span>
+                <span className="text-sm font-bold text-neutral-900">{selectedStream.amountPerCycle.toLocaleString()} RUB</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-neutral-500">Interval</span>
+                <span className="text-sm font-bold text-neutral-900">{selectedStream.interval}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-neutral-500">Status</span>
+                <span className={`text-sm font-bold ${selectedStream.status === "active" ? "text-green-600" : "text-amber-600"}`}>
+                  {selectedStream.status === "active" ? "Active" : "Paused"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-neutral-500">Total Streamed</span>
+                <span className="text-sm font-bold text-primary">{selectedStream.streamed.toFixed(2)} RUB</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm text-neutral-500">Created</span>
+                <span className="text-sm font-bold text-neutral-900">Today</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                size="lg"
+                variant="ghost"
+                onClick={() => setSelectedStream(null)}
+                className="flex-1"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
