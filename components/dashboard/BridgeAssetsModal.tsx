@@ -13,6 +13,7 @@ import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
 import { useSwap } from "@/hooks/useSwap";
 import type { SwapToken } from "@/types";
+import { parseEther } from "viem";
 
 const TOKENS: SwapToken[] = ["ETH", "ARB"];
 
