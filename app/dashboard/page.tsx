@@ -6,7 +6,7 @@ import { useSubscription } from "@/hooks/useContracts";
 import { useSalaryStreaming } from "@/hooks/useSalaryStreaming";
 import { useWallet } from "../../context/WalletContext";
 import StatsCard from "../../components/dashboard/StatsCard";
-import ActivityChart from "../../components/dashboard/ActivityChart";
+import DuneAnalytics from "../../components/dashboard/DuneAnalytics";
 
 const ARBITRUM_SEPOLIA_RPC = "https://sepolia-rollup.arbitrum.io/rpc";
 const RUBBI_TOKEN_ADDRESS = process.env.NEXT_PUBLIC_RUBBI_TOKEN_ADDRESS as `0x${string}`;
@@ -145,35 +145,30 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <ActivityChart className="lg:col-span-2" />
+      <DuneAnalytics />
 
-        <div className="bg-white rounded-2xl p-6 border border-neutral-100">
-          <h3 className="font-bold text-neutral-900 mb-5">Recent Activities</h3>
-          <div className="space-y-4">
-            {activities.map((a) => (
-              <div key={a.id} className="flex items-start gap-3">
-                <ActivityIcon type={a.icon} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-1">
-                    <p className="text-sm font-semibold text-neutral-800 truncate">{a.label}</p>
-                    <p className="text-xs text-neutral-400 shrink-0">{a.time}</p>
-                  </div>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${statusColors[a.status] || "bg-neutral-100 text-neutral-500"}`}>
-                      {a.status}
-                    </span>
-                    <span className={`text-sm font-bold ${a.positive ? "text-green-600" : "text-neutral-600"}`}>
-                      {a.amount}
-                    </span>
-                  </div>
+      <div className="bg-white rounded-2xl p-6 border border-neutral-100">
+        <h3 className="font-bold text-neutral-900 mb-5">Recent Activities</h3>
+        <div className="space-y-4">
+          {activities.map((a) => (
+            <div key={a.id} className="flex items-start gap-3">
+              <ActivityIcon type={a.icon} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <p className="text-sm font-semibold text-neutral-800 truncate">{a.label}</p>
+                  <p className="text-xs text-neutral-400 shrink-0">{a.time}</p>
+                </div>
+                <div className="flex items-center justify-between mt-1">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${statusColors[a.status] || "bg-neutral-100 text-neutral-500"}`}>
+                    {a.status}
+                  </span>
+                  <span className={`text-sm font-bold ${a.positive ? "text-green-600" : "text-neutral-600"}`}>
+                    {a.amount}
+                  </span>
                 </div>
               </div>
-            ))}
-          </div>
-          <button className="mt-5 w-full text-center text-[10px] font-bold uppercase tracking-widest text-primary hover:underline">
-            View All Ledger Logs
-          </button>
+            </div>
+          ))}
         </div>
       </div>
     </div>

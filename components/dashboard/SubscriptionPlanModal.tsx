@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import Image from "next/image";
 import { Check, ExternalLink, AlertCircle } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import Button from "@/components/ui/Button";
@@ -48,6 +49,22 @@ export default function SubscriptionPlanModal({
       size="md"
     >
       <div className="space-y-3">
+        {/* Channel Logo */}
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-12 h-12 rounded-xl overflow-hidden bg-neutral-100 flex items-center justify-center shrink-0">
+            <Image
+              src={channel.logo}
+              alt={`${channel.name} logo`}
+              width={48}
+              height={48}
+              className="object-contain"
+            />
+          </div>
+          <div>
+            <p className="font-bold text-neutral-900">{channel.name}</p>
+            <p className="text-xs text-neutral-500">{channel.tiers.length} plan{channel.tiers.length > 1 ? "s" : ""} available</p>
+          </div>
+        </div>
         {channel.tiers.map((tier) => {
           const isSelected = selectedTier?.id === tier.id;
           return (

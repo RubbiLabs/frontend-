@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo } from "react";
+import Image from "next/image";
 import {
   Pause,
   Play,
@@ -374,11 +375,14 @@ export default function SubscriptionsPage() {
                   className="text-left bg-white rounded-xl border border-neutral-200 p-4 hover:border-primary/40 hover:shadow-md transition-all group"
                 >
                   <div className="flex items-center gap-3 mb-3">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white text-sm font-bold"
-                      style={{ backgroundColor: channel.color }}
-                    >
-                      {channel.name.charAt(0)}
+                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-neutral-100 flex items-center justify-center shrink-0">
+                      <Image
+                        src={channel.logo}
+                        alt={`${channel.name} logo`}
+                        width={40}
+                        height={40}
+                        className="object-contain"
+                      />
                     </div>
                     <div>
                       <p className="font-bold text-neutral-900 group-hover:text-primary transition-colors">
