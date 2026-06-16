@@ -79,7 +79,7 @@ export default function BridgeAssetsModal({ open, onClose }: Props) {
   const [tokenOpen, setTokenOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  const meta = tokenMeta[inputToken];
+  const meta = tokenMeta[inputToken as SwapToken];
   const hasInput = inputAmount && Number(inputAmount) > 0;
   const hasOutput = estimatedOutput > 0n;
 
@@ -210,9 +210,7 @@ export default function BridgeAssetsModal({ open, onClose }: Props) {
             You Receive
           </label>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-white text-xs font-extrabold">R</span>
-            </div>
+            <img src="/token-logo/RUB-logo.png" alt="RUB logo" className="w-8 h-8 rounded-full object-cover" />
             <div className="flex-1">
               <div className="text-2xl font-extrabold text-primary">
                 {isQuoting ? (

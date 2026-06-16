@@ -1,14 +1,32 @@
 "use client";
-import { useCallback, useRef } from "react";
-import { useAccount, useChainId, useWriteContract, useWaitForTransactionReceipt, useWalletClient } from "wagmi";
+import { useCallback, useRef, useState } from "react";
+import { useAccount } from "wagmi";
 import { useZeroDev } from "@/context/ZeroDevContext";
+import { useWallet } from "@/context/WalletContext";
+import { useSocialAuth } from "@/context/SocialAuthContext";
 import { useToast } from "@/context/ToastContext";
+import { useTransactionModal } from "@/context/TransactionModalContext";
 import { api } from "@/lib/api";
-import { createPublicClient, http, formatGwei, type Abi, type Address } from "viem";
-import { arbitrumSepolia } from "viem/chains";
+import type { Abi, Address } from "viem";
 
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
-const ARB_SEPOLIA_RPC = "https://sepolia-rollup.arbitrum.io/rpc";
+
+const txTypeLabels: Record<string, { title: string; submitting: string; confirming: string; success: string }> = {
+  faucet: { title: "Claiming Faucet", submitting: "Claiming tokens via gasless relay...", confirming: "Waiting for tokens to be credited...", success: "Faucet tokens claimed!" },
+  deposit: { title: "Depositing Funds", submitting: "Depositing to contract via gasless relay...", confirming: "Waiting for deposit confirmation...", success: "Funds deposited!" },
+  subscribe: { title: "Creating Subscription", submitting: "Creating subscription via gasless relay...", confirming: "Waiting for subscription activation...", success: "Subscription activated!" },
+  pause: { title: "Pausing Subscription", submitting: "Pausing via gasless relay...", confirming: "Waiting for confirmation...", success: "Subscription paused!" },
+  resume: { title: "Resuming Subscription", submitting: "Resuming via gasless relay...", confirming: "Waiting for confirmation...", success: "Subscription resumed!" },
+  createStream: { title: "Creating Salary Stream", submitting: "Creating stream via gasless relay...", confirming: "Waiting for stream creation...", success: "Stream created!" },
+  pauseStream: { title: "Pausing Stream", submitting: "Pausing stream via gasless relay...", confirming: "Waiting for confirmation...", success: "Stream paused!" },
+  resumeStream: { title: "Resuming Stream", submitting: "Resuming stream via gasless relay...", confirming: "Waiting for confirmation...", success: "Stream resumed!" },
+  disburse: { title: "Disbursing Funds", submitting: "Disbursing via gasless relay...", confirming: "Waiting for disbursement...", success: "Funds disbursed!" },
+  withdraw: { title: "Withdrawing Funds", submitting: "Withdrawing via gasless relay...", confirming: "Waiting for withdrawal...", success: "Funds withdrawn!" },
+  createAccount: { title: "Creating Account", submitting: "Creating account via gasless relay...", confirming: "Waiting for account creation...", success: "Account created!" },
+  approve: { title: "Approving Token", submitting: "Approving via gasless relay...", confirming: "Waiting for approval...", success: "Token approved!" },
+  swap: { title: "Swapping Tokens", submitting: "Submitting swap via gasless relay...", confirming: "Waiting for swap completion...", success: "Swap complete!" },
+  default: { title: "Processing Transaction", submitting: "Submitting via gasless relay...", confirming: "Waiting for confirmation...", success: "Transaction complete!" },
+};
 
 interface ContractWriteParams {
   abi: Abi;
@@ -17,24 +35,33 @@ interface ContractWriteParams {
   args?: readonly unknown[];
   value?: bigint;
   onSuccess?: (txHash: string) => void;
+  txType?: string;
   backendSync?: {
-    endpoint: "subscriptions.start" | "subscriptions.pause" | "subscriptions.resume"
-      | "faucet.claim" | "salaryStreaming.create" | "salaryStreaming.pause"
-      | "salaryStreaming.resume" | "salaryStreaming.disburse";
+    endpoint:
+      | "subscriptions.start"
+      | "subscriptions.pause"
+      | "subscriptions.resume"
+      | "faucet.claim"
+      | "salaryStreaming.create"
+      | "salaryStreaming.pause"
+      | "salaryStreaming.resume"
+      | "salaryStreaming.disburse";
     params: Record<string, any>;
   };
 }
 
 export function useContractWrite() {
-  const { address, chainId } = useAccount();
-  const { data: walletClient } = useWalletClient();
-  const { kernelClient, isReady: isZeroDevReady, smartAccountAddress } = useZeroDev();
+  const { address: wagmiAddress, chainId: wagmiChainId } = useAccount();
+  const { address: walletAddress, chainId: walletChainId } = useWallet();
+  const { isSocialLogin, socialAddress } = useSocialAuth();
+  const { kernelClient, isReady: isZeroDevReady, isLoading: isZeroDevLoading, error: zeroDevError } = useZeroDev();
   const { showToast } = useToast();
+  const { showTxModal, setTxStatus, hideTxModal } = useTransactionModal();
   const syncCalledRef = useRef<string | null>(null);
+  const [isWriting, setIsWriting] = useState(false);
 
-  const { writeContract, data: wagmiTxHash, isPending: isWagmiPending } = useWriteContract();
-  const { isLoading: isWagmiConfirming, isSuccess: isWagmiSuccess } =
-    useWaitForTransactionReceipt({ hash: wagmiTxHash });
+  const address = isSocialLogin ? socialAddress : (wagmiAddress || walletAddress);
+  const chainId = isSocialLogin ? ARBITRUM_SEPOLIA_CHAIN_ID : (wagmiChainId || walletChainId);
 
   const execute = useCallback(
     async ({
@@ -44,99 +71,57 @@ export function useContractWrite() {
       args = [],
       value = 0n,
       onSuccess,
+      txType = "default",
       backendSync,
     }: ContractWriteParams) => {
+      const labels = txTypeLabels[txType] || txTypeLabels.default;
+
       if (chainId !== ARBITRUM_SEPOLIA_CHAIN_ID) {
-        showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia");
+        showToast("error", "Wrong Network", "Please switch to Arbitrum Sepolia in your wallet.");
         return null;
       }
 
       if (!address) {
-        showToast("error", "Not Connected", "Please connect your wallet first");
+        showToast("error", "Not Connected", "Please connect your wallet first.");
         return null;
       }
 
+      if (!kernelClient || !isZeroDevReady) {
+        const msg = zeroDevError
+          ? `ZeroDev error: ${zeroDevError}`
+          : isZeroDevLoading
+            ? "Smart account is still initializing. Please wait for the blue 'Gasless transactions active' banner and try again."
+            : "ZeroDev smart account not initialized. Check browser console for details.";
+        showToast("error", "Gasless Not Ready", msg);
+        console.error(`[ContractWrite] ZeroDev not ready for ${functionName}. isLoading=${isZeroDevLoading} error=${zeroDevError}`);
+        return null;
+      }
+
+      setIsWriting(true);
+      showTxModal({ type: txType, title: labels.title, description: labels.submitting });
       let txHash: string | null = null;
 
       try {
-        if (kernelClient && isZeroDevReady) {
-          // === ZERO DEV GASLESS PATH ===
-          const client = kernelClient as any;
-          const hash = await client.writeContract({
-            address: contractAddress,
-            abi,
-            functionName,
-            args,
-            value,
-          });
+        const client = kernelClient as any;
 
-          const receipt = await client.waitForUserOperationReceipt({
-            hash,
-            timeout: 120_000,
-          });
+        const hash = await client.writeContract({
+          address: contractAddress,
+          abi,
+          functionName,
+          args,
+          value,
+        });
 
-          txHash = receipt.receipt.transactionHash;
-        } else {
-          // === WAGMI FALLBACK (NOT GASLESS) ===
-          // Fetch current gas prices from the network
-          const publicClient = createPublicClient({
-            transport: http(ARB_SEPOLIA_RPC),
-            chain: arbitrumSepolia,
-          });
+        setTxStatus("confirming", labels.confirming);
 
-          const [gasPrice, block] = await Promise.all([
-            publicClient.getGasPrice(),
-            publicClient.getBlock(),
-          ]);
+        const receipt = await client.waitForUserOperationReceipt({
+          hash,
+          timeout: 120_000,
+        });
 
-          // Set maxFeePerGas to 2x base fee + priority fee for Arbitrum
-          const baseFee = block.baseFeePerGas || gasPrice;
-          const maxPriorityFeePerGas = 1000000000n; // 1 gwei priority
-          const maxFeePerGas = baseFee * 2n + maxPriorityFeePerGas;
-
-          // Estimate gas limit
-          const gas = await publicClient.estimateContractGas({
-            address: contractAddress,
-            abi,
-            functionName,
-            args,
-            account: address,
-            value,
-          });
-
-          // Add 20% buffer to gas estimate
-          const gasWithBuffer = (gas * 120n) / 100n;
-
-          await new Promise<void>((resolve, reject) => {
-            writeContract(
-              {
-                address: contractAddress,
-                abi,
-                functionName,
-                args,
-                value,
-                gas: gasWithBuffer,
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-              },
-              {
-                onSuccess: (hash) => {
-                  txHash = hash;
-                  resolve();
-                },
-                onError: (err) => reject(err),
-              }
-            );
-          });
-
-          // Wait for confirmation
-          if (txHash) {
-            await publicClient.waitForTransactionReceipt({ hash: txHash as `0x${string}` });
-          }
-        }
+        txHash = receipt.receipt.transactionHash;
 
         if (txHash) {
-          // === BACKEND SYNC ===
           if (backendSync) {
             const syncKey = `${backendSync.endpoint}:${txHash}`;
             if (syncCalledRef.current !== syncKey) {
@@ -149,24 +134,35 @@ export function useContractWrite() {
             }
           }
 
-          showToast("success", "Transaction Confirmed", `${functionName} completed.`);
+          setTxStatus("success", labels.success, txHash);
+          showToast("success", labels.title, labels.success);
           onSuccess?.(txHash);
         }
 
         return txHash;
       } catch (err: any) {
-        console.error(`Contract write error (${functionName}):`, err);
-        showToast("error", "Transaction Failed", err.message || "Transaction failed.");
+        console.error(`[ContractWrite] ${functionName} failed:`, err);
+        const msg = err?.message || "Transaction was rejected or failed.";
+        let userMsg = msg;
+        if (msg.includes("User rejected") || msg.includes("user rejected")) {
+          userMsg = "You rejected the transaction.";
+        } else if (msg.includes("insufficient")) {
+          userMsg = "Insufficient funds for this transaction.";
+        }
+        setTxStatus("error", userMsg, undefined, userMsg);
+        showToast("error", "Transaction Failed", userMsg);
         return null;
+      } finally {
+        setIsWriting(false);
       }
     },
-    [address, chainId, kernelClient, isZeroDevReady, writeContract, showToast]
+    [address, chainId, kernelClient, isZeroDevReady, isZeroDevLoading, zeroDevError, showToast, showTxModal, setTxStatus]
   );
 
   return {
     execute,
-    isWriting: isWagmiPending || isWagmiConfirming,
-    smartAccountAddress,
+    isWriting,
+    smartAccountAddress: kernelClient ? "connected" : null,
   };
 }
 

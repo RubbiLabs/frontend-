@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { useAccount, useWalletClient } from "wagmi";
+import { useWalletClient } from "wagmi";
 import {
   createKernelAccount,
   createKernelAccountClient,
@@ -8,8 +8,10 @@ import {
 } from "@zerodev/sdk";
 import { KERNEL_V3_1, getEntryPoint } from "@zerodev/sdk/constants";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, type WalletClient } from "viem";
 import { getZeroDevRpc, ZERODEV_CHAIN } from "@/lib/zerodev";
+import { useWallet } from "@/context/WalletContext";
+import { useSocialAuth } from "@/context/SocialAuthContext";
 
 interface ZeroDevContextValue {
   kernelClient: any | null;
@@ -28,15 +30,22 @@ const ZeroDevContext = createContext<ZeroDevContextValue>({
 });
 
 export function ZeroDevProvider({ children }: { children: React.ReactNode }) {
-  const { address, isConnected } = useAccount();
-  const { data: walletClient } = useWalletClient();
+  const { address: walletAddress, isConnected: walletConnected } = useWallet();
+  const { isSocialLogin, socialAddress, socialWalletClient } = useSocialAuth();
+  const { data: wagmiWalletClient } = useWalletClient();
   const [kernelClient, setKernelClient] = useState<any | null>(null);
   const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const initializedRef = useRef<string | null>(null);
 
-  const initKernel = useCallback(async (wc: any, userAddress: string) => {
+  const effectiveAddress = isSocialLogin ? socialAddress : walletAddress;
+  const effectiveWalletClient: WalletClient | null = isSocialLogin
+    ? socialWalletClient
+    : (wagmiWalletClient as WalletClient | null);
+  const isEffectiveConnected = isSocialLogin ? !!socialAddress : walletConnected;
+
+  const initKernel = useCallback(async (wc: WalletClient, userAddress: string) => {
     if (initializedRef.current === userAddress) return;
     setIsLoading(true);
     setError(null);
@@ -54,7 +63,7 @@ export function ZeroDevProvider({ children }: { children: React.ReactNode }) {
       const kernelVersion = KERNEL_V3_1;
 
       const ecdsaValidator = await signerToEcdsaValidator(publicClient, {
-        signer: wc,
+        signer: wc as any,
         entryPoint,
         kernelVersion,
       });
@@ -95,14 +104,14 @@ export function ZeroDevProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (isConnected && walletClient && address) {
-      initKernel(walletClient, address);
+    if (isEffectiveConnected && effectiveAddress && effectiveWalletClient) {
+      initKernel(effectiveWalletClient, effectiveAddress);
     } else {
       setKernelClient(null);
       setSmartAccountAddress(null);
       initializedRef.current = null;
     }
-  }, [isConnected, walletClient, address, initKernel]);
+  }, [isEffectiveConnected, effectiveAddress, effectiveWalletClient, initKernel]);
 
   return (
     <ZeroDevContext.Provider

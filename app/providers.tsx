@@ -9,6 +9,7 @@ import { WalletProvider } from "@/context/WalletContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { ZeroDevProvider } from "@/context/ZeroDevContext";
 import { SocialAuthProvider } from "@/context/SocialAuthContext";
+import { TransactionModalProvider } from "@/context/TransactionModalContext";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +25,9 @@ export default function Providers({
           <SocialAuthProvider>
             <WalletProvider>
               <ZeroDevProvider>
-                {children}
+                <TransactionModalProvider>
+                  {children}
+                </TransactionModalProvider>
               </ZeroDevProvider>
             </WalletProvider>
           </SocialAuthProvider>

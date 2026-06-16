@@ -21,17 +21,11 @@ export default function LandingNavbar() {
   }, []);
 
   const handleConnect = async () => {
-    if (isConnected) {
-      router.push("/dashboard");
-      return;
-    }
     router.push("/onboarding");
   };
 
-  const logoHref = isConnected ? "/dashboard" : "/";
-  const links = isConnected
-    ? []
-    : [
+  const logoHref = "/";
+  const links = [
         { href: "/", label: "Home" },
         { href: "/about", label: "About" },
         { href: "/services", label: "Services" },
@@ -78,25 +72,14 @@ export default function LandingNavbar() {
 
           {/* CTA */}
           <div className="hidden md:flex items-center gap-3">
-            {isConnected ? (
-              <Button
-                variant="primary"
-                size="md"
-                icon={<Wallet size={16} />}
-                onClick={() => router.push("/dashboard")}
-              >
-                Dashboard
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                size="md"
-                icon={<Wallet size={16} />}
-                onClick={handleConnect}
-              >
-                Begin Automation
-              </Button>
-            )}
+            <Button
+              variant="primary"
+              size="md"
+              icon={<Wallet size={16} />}
+              onClick={handleConnect}
+            >
+              Begin Automation
+            </Button>
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -125,27 +108,15 @@ export default function LandingNavbar() {
             </Link>
           ))}
           <div className="pt-2 border-t border-neutral-100">
-            {isConnected ? (
               <Button
                 variant="primary"
                 size="md"
                 fullWidth
                 icon={<Wallet size={16} />}
-                onClick={() => { setMobileOpen(false); router.push("/dashboard"); }}
-              >
-                Dashboard
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                size="md"
-                fullWidth
-                icon={<Wallet size={16} />}
-                onClick={() => { setMobileOpen(false); handleConnect(); }}
+                onClick={() => { setMobileOpen(false); router.push("/onboarding"); }}
               >
                 Begin Automation
               </Button>
-            )}
           </div>
         </div>
       )}

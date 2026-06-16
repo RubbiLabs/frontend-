@@ -1,6 +1,7 @@
-import { useReadContract, useAccount, useChainId } from "wagmi";
+import { useReadContract, useChainId } from "wagmi";
 import { useBlockchainStore } from "@/store/blockchainStore";
 import { useContractWrite } from "@/hooks/useContractWrite";
+import { useEffectiveAddress } from "@/hooks/useEffectiveAddress";
 import SalaryStreamingABI from "@/Abis/SalaryStreaming.json";
 import { useEffect } from "react";
 
@@ -15,7 +16,7 @@ export interface StreamDetails {
 }
 
 export function useSalaryStreaming() {
-  const { address } = useAccount();
+  const address = useEffectiveAddress();
   const chainId = useChainId();
   const { execute, isWriting } = useContractWrite();
   const {

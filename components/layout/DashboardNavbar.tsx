@@ -1,8 +1,10 @@
 "use client";
 import React, { useState } from "react";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, LogOut, Wallet } from "lucide-react";
+import { Menu, LogOut, Wallet, User } from "lucide-react";
 import { useWallet } from "@/context/WalletContext";
+import { useSocialAuth } from "@/context/SocialAuthContext";
 import { useToast } from "@/context/ToastContext";
 import { navItems } from "@/components/layout/DashboardSidebar";
 import RubbiLogo from "@/components/ui/RubbiLogo";
@@ -16,25 +18,32 @@ export default function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { disconnect, address } = useWallet();
+  const { isSocialLogin, socialUser, socialAddress, logoutSocial } = useSocialAuth();
   const { info } = useToast();
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
   const handleDisconnect = () => {
-    disconnect();
-    info("Wallet Disconnected", "You have been signed out.");
+    if (isSocialLogin) {
+      logoutSocial();
+    } else {
+      disconnect();
+    }
+    info("Signed Out", "You have been signed out.");
     router.push("/");
   };
 
-  const activeLabel =
-    navItems.find((n) => n.href === pathname)?.label ?? "Dashboard";
-  const shortAddr = address
-    ? `${address.slice(0, 6)}...${address.slice(-4)}`
-    : "";
+  const isSocial = isSocialLogin && socialUser;
+  const displayName = isSocial
+    ? socialUser.name.split(" ")[0]
+    : address
+      ? `${address.slice(0, 6)}...${address.slice(-4)}`
+      : "";
+
+  const profilePicture = isSocial && socialUser.picture ? socialUser.picture : null;
 
   return (
     <>
       <header className="bg-neutral-50 border-b border-neutral-200 px-5 py-3.5 flex items-center justify-between shrink-0">
-        {/* Left: hamburger (mobile) + brand/title */}
         <div className="flex items-center gap-3">
           <button
             className="lg:hidden p-2 rounded-lg text-neutral-500 hover:bg-neutral-100 transition-colors"
@@ -44,37 +53,45 @@ export default function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
             <Menu size={18} />
           </button>
 
-          {/* Logo mark visible on mobile */}
           <div className="flex items-center gap-2 lg:hidden">
             <RubbiLogo size={28} />
           </div>
 
-          {/* Desktop: brand name + current page */}
           <div className="hidden lg:flex items-center gap-2">
-            {/* <span className="font-bold text-primary text-base">Rubbi</span>
-            <span className="text-neutral-300">|</span> */}
-            {/* <span className="text-sm text-primary-400 font-bold">{activeLabel}</span> */}
           </div>
         </div>
 
-        {/* Right: network badge + wallet address + disconnect */}
         <div className="flex items-center gap-2.5">
-          {/* <NetworkBadge chainId={chainId} /> */}
-
-          {/* Wallet address pill */}
+          {/* Profile pill */}
           <div className="hidden sm:flex items-center gap-2 bg-white border border-neutral-200 rounded-xl px-3 py-2">
-            <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center">
-              <Wallet size={11} className="text-primary" />
-            </div>
-            <span className="text-[11px] font-mono text-neutral-600 leading-none">
-              {shortAddr}
+            {profilePicture ? (
+              <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+                <Image
+                  src={profilePicture}
+                  alt={socialUser?.name || "User"}
+                  width={20}
+                  height={20}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : (
+              <div className="w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center">
+                {isSocial ? (
+                  <User size={11} className="text-primary" />
+                ) : (
+                  <Wallet size={11} className="text-primary" />
+                )}
+              </div>
+            )}
+            <span className="text-[13px] font-medium text-neutral-600 leading-none">
+              {displayName}
             </span>
           </div>
 
           {/* Disconnect */}
           <button
             onClick={() => setShowDisconnectModal(true)}
-            title="Disconnect wallet"
+            title="Sign out"
             className="p-2 rounded-xl text-neutral-400 hover:text-red-500 hover:bg-red-50 transition-colors"
           >
             <LogOut size={16} />
@@ -85,9 +102,13 @@ export default function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
       {showDisconnectModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md animate-scaleIn">
-            <h3 className="text-lg font-bold text-neutral-900 mb-2">Disconnect Wallet?</h3>
+            <h3 className="text-lg font-bold text-neutral-900 mb-2">
+              {isSocial ? "Sign Out?" : "Disconnect Wallet?"}
+            </h3>
             <p className="text-sm text-neutral-500 mb-6">
-              Are you sure you want to disconnect your wallet? You will be redirected to the homepage.
+              {isSocial
+                ? `Are you sure you want to sign out of ${socialUser.email}? You will be redirected to the homepage.`
+                : "Are you sure you want to disconnect your wallet? You will be redirected to the homepage."}
             </p>
             <div className="flex gap-3">
               <Button variant="ghost" onClick={() => setShowDisconnectModal(false)}>
@@ -101,7 +122,7 @@ export default function DashboardNavbar({ onMenuClick }: DashboardNavbarProps) {
                   handleDisconnect();
                 }}
               >
-                Disconnect
+                {isSocial ? "Sign Out" : "Disconnect"}
               </Button>
             </div>
           </div>

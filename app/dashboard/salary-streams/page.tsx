@@ -8,8 +8,7 @@ import Modal from "../../../components/ui/Modal";
 import { useToast } from "../../../context/ToastContext";
 import { useSalaryStreaming, StreamDetails } from "@/hooks/useSalaryStreaming";
 import { useNetworkSwitch } from "@/hooks/useNetworkSwitch";
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import SalaryStreamingABI from "@/Abis/SalaryStreaming.json";
+import { useAccount } from "wagmi";
 
 const SALARY_STREAMING_ADDRESS = process.env.NEXT_PUBLIC_SALARY_STREAMING_ADDRESS as `0x${string}`;
 
@@ -56,17 +55,13 @@ export default function SalaryStreamsPage() {
     resumeMonthlyStream,
     refetchDaily,
     refetchMonthly,
+    disburseDaily,
+    disburseMonthly,
   } = useSalaryStreaming();
 
   const [streams, setStreams] = useState<Stream[]>([]);
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [disburseLoading, setDisburseLoading] = useState(false);
-
-  // Disburse functions: call SalaryStreaming.disburseDaily() and disburseMonthly()
-  const { writeContract: writeDisburseDaily, data: disburseDailyHash, isPending: isDisbursingDaily } = useWriteContract();
-  const { writeContract: writeDisburseMonthly, data: disburseMonthlyHash, isPending: isDisbursingMonthly } = useWriteContract();
-  const { isLoading: isDisburseDailyConfirming } = useWaitForTransactionReceipt({ hash: disburseDailyHash });
-  const { isLoading: isDisburseMonthlyConfirming } = useWaitForTransactionReceipt({ hash: disburseMonthlyHash });
 
   const [recipientName, setRecipientName] = useState("");
   const [recipient, setRecipient] = useState("");
@@ -203,25 +198,14 @@ export default function SalaryStreamsPage() {
     toast("info", "Processing Disbursement...", "Broadcasting disbursement transactions.");
 
     try {
-      // Disburse daily streams
       if (dailyStreams.length > 0) {
-        writeDisburseDaily({
-          address: SALARY_STREAMING_ADDRESS,
-          abi: SalaryStreamingABI.abi,
-          functionName: "disburseDaily",
-        });
+        await disburseDaily();
       }
-
-      // Disburse monthly streams
       if (monthlyStreams.length > 0) {
-        writeDisburseMonthly({
-          address: SALARY_STREAMING_ADDRESS,
-          abi: SalaryStreamingABI.abi,
-          functionName: "disburseMonthly",
-        });
+        await disburseMonthly();
       }
 
-      toast("success", "Funds Disbursed!", "Disbursement transactions have been broadcast to Arbitrum Sepolia.");
+      toast("success", "Funds Disbursed!", "Disbursement transactions completed via gasless transaction.");
       await refetchDaily();
       await refetchMonthly();
     } catch (err: any) {
@@ -442,7 +426,7 @@ export default function SalaryStreamsPage() {
       <div className="flex justify-end">
         <Button 
           size="lg" 
-          loading={disburseLoading || isDisbursingDaily || isDisbursingMonthly || isDisburseDailyConfirming || isDisburseMonthlyConfirming}
+          loading={disburseLoading}
           icon={<RefreshCw size={16} />} 
           iconPosition="right" 
           onClick={handleDisburseAll}

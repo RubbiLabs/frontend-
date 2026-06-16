@@ -1,6 +1,7 @@
-import { useReadContract, useAccount, useChainId } from "wagmi";
+import { useReadContract, useChainId } from "wagmi";
 import { useBlockchainStore } from "@/store/blockchainStore";
 import { useContractWrite } from "@/hooks/useContractWrite";
+import { useEffectiveAddress } from "@/hooks/useEffectiveAddress";
 import SubscriptionServiceABI from "@/Abis/SubscriptionService.json";
 import ModalABI from "@/Abis/Modal.json";
 import { useEffect, useState } from "react";
@@ -12,7 +13,7 @@ const subscriptionServiceAddress = process.env.NEXT_PUBLIC_SUBSCRIPTION_SERVICE_
 const modalContractAddress = process.env.NEXT_PUBLIC_MODAL_CONTRACT_ADDRESS as `0x${string}`;
 
 export function useSubscription() {
-  const { address } = useAccount();
+  const address = useEffectiveAddress();
   const chainId = useChainId();
   const { showToast } = useToast();
   const { execute, isWriting } = useContractWrite();
@@ -132,7 +133,7 @@ export function useSubscription() {
 }
 
 export function useModalContract() {
-  const { address } = useAccount();
+  const address = useEffectiveAddress();
   const chainId = useChainId();
   const { setUserBalance, setIsCorrectNetwork } = useBlockchainStore();
   const { showToast } = useToast();

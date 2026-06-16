@@ -38,6 +38,7 @@ const USERNAMES_KEY = "rubbi_usernames";
 const CARDS_KEY = "rubbi_virtual_cards";
 const BALANCES_KEY = "rubbi_rub_balances";
 const ONBOARDING_KEY = "rubbi_onboarding_complete_map";
+const USER_DISCONNECTED_KEY = "rubbi_user_disconnected";
 
 const WalletContext = createContext<WalletContextValue | null>(null);
 
@@ -127,10 +128,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    const userDisconnected = localStorage.getItem(USER_DISCONNECTED_KEY) === "true";
     const stored = localStorage.getItem(WALLET_KEY);
     let restoredAddress: `0x${string}` | undefined;
 
-    if (stored) {
+    if (stored && !userDisconnected) {
       try {
         const parsed = JSON.parse(stored);
         if (parsed.address) {
@@ -224,6 +226,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const connect = async () => {
     if (typeof window === "undefined") return;
     setIsConnecting(true);
+    localStorage.removeItem(USER_DISCONNECTED_KEY);
 
     try {
       // Try wagmi connect first (via injected connector)
@@ -265,6 +268,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     resetWalletScopedState();
     if (typeof window !== "undefined") {
       localStorage.removeItem(WALLET_KEY);
+      localStorage.setItem(USER_DISCONNECTED_KEY, "true");
     }
   };
 
@@ -273,6 +277,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const wagmiAccount = useAccount();
   useEffect(() => {
     if (!isHydrated) return;
+
+    const userDisconnected = typeof window !== "undefined" && localStorage.getItem(USER_DISCONNECTED_KEY) === "true";
+    if (userDisconnected) return;
 
     if (wagmiAccount.isConnected && wagmiAccount.address) {
       // wagmi is connected — sync to WalletContext

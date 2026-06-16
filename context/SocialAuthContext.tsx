@@ -1,7 +1,8 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { privateKeyToAccount } from "viem/accounts";
-import { Hex } from "viem";
+import { createWalletClient, custom, type Hex, type WalletClient } from "viem";
+import { arbitrumSepolia } from "viem/chains";
 
 interface SocialAuthContextValue {
   socialUser: SocialUser | null;
@@ -9,10 +10,11 @@ interface SocialAuthContextValue {
   loginWithGoogle: () => Promise<void>;
   logoutSocial: () => void;
   socialAddress: Hex | null;
+  socialWalletClient: WalletClient | null;
   isSocialLoading: boolean;
 }
 
-interface SocialUser {
+export interface SocialUser {
   id: string;
   email: string;
   name: string;
@@ -26,6 +28,7 @@ const SocialAuthContext = createContext<SocialAuthContextValue>({
   loginWithGoogle: async () => {},
   logoutSocial: () => {},
   socialAddress: null,
+  socialWalletClient: null,
   isSocialLoading: false,
 });
 
@@ -35,17 +38,33 @@ const SOCIAL_WALLET_KEY = "rubbi_social_wallet";
 function getSocialLoginAccount() {
   const pk = process.env.NEXT_PUBLIC_SOCIAL_LOGIN_PRIVATE_KEY;
   if (!pk) {
-    console.warn("[SocialAuth] NEXT_PUBLIC_SOCIAL_LOGIN_PRIVATE_KEY not set. Social login unavailable.");
+    console.warn("[SocialAuth] NEXT_PUBLIC_SOCIAL_LOGIN_PRIVATE_KEY not set.");
     return null;
   }
   const normalized = pk.startsWith("0x") ? pk : `0x${pk}`;
   return privateKeyToAccount(normalized as Hex);
 }
 
+function createSocialWalletClient(account: ReturnType<typeof privateKeyToAccount>): WalletClient {
+  return createWalletClient({
+    account,
+    chain: arbitrumSepolia,
+    transport: custom({
+      async request({ method, params }) {
+        const ethereum = (window as any).ethereum;
+        if (!ethereum) throw new Error("No ethereum provider");
+        return ethereum.request({ method, params });
+      },
+    }),
+  });
+}
+
 export function SocialAuthProvider({ children }: { children: ReactNode }) {
   const [socialUser, setSocialUser] = useState<SocialUser | null>(null);
   const [socialAddress, setSocialAddress] = useState<Hex | null>(null);
+  const [socialWalletClient, setSocialWalletClient] = useState<WalletClient | null>(null);
   const [isSocialLoading, setIsSocialLoading] = useState(false);
+  const walletClientRef = useRef<WalletClient | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -57,7 +76,15 @@ export function SocialAuthProvider({ children }: { children: ReactNode }) {
         const walletStored = localStorage.getItem(SOCIAL_WALLET_KEY);
         if (walletStored) {
           const wallet = JSON.parse(walletStored);
-          setSocialAddress(wallet.address as Hex);
+          const addr = wallet.address as Hex;
+          setSocialAddress(addr);
+
+          const account = getSocialLoginAccount();
+          if (account && !walletClientRef.current) {
+            const wc = createSocialWalletClient(account);
+            walletClientRef.current = wc;
+            setSocialWalletClient(wc);
+          }
         }
       }
     } catch {}
@@ -73,7 +100,7 @@ export function SocialAuthProvider({ children }: { children: ReactNode }) {
 
       const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 
-      if (!clientId) {
+      if (!clientId || !clientId.includes(".apps.googleusercontent.com")) {
         const mockUser: SocialUser = {
           id: `google_${Date.now()}_${Math.random().toString(36).slice(2)}`,
           email: `user${Math.floor(Math.random() * 9999)}@gmail.com`,
@@ -84,6 +111,11 @@ export function SocialAuthProvider({ children }: { children: ReactNode }) {
 
         setSocialUser(mockUser);
         setSocialAddress(account.address);
+
+        const wc = createSocialWalletClient(account);
+        walletClientRef.current = wc;
+        setSocialWalletClient(wc);
+
         localStorage.setItem(SOCIAL_AUTH_KEY, JSON.stringify(mockUser));
         localStorage.setItem(SOCIAL_WALLET_KEY, JSON.stringify({ address: account.address }));
         setIsSocialLoading(false);
@@ -116,6 +148,11 @@ export function SocialAuthProvider({ children }: { children: ReactNode }) {
 
       setSocialUser(result.user);
       setSocialAddress(account.address);
+
+      const wc = createSocialWalletClient(account);
+      walletClientRef.current = wc;
+      setSocialWalletClient(wc);
+
       localStorage.setItem(SOCIAL_AUTH_KEY, JSON.stringify(result.user));
       localStorage.setItem(SOCIAL_WALLET_KEY, JSON.stringify({ address: account.address }));
     } catch (err: any) {
@@ -129,6 +166,8 @@ export function SocialAuthProvider({ children }: { children: ReactNode }) {
   const logoutSocial = useCallback(() => {
     setSocialUser(null);
     setSocialAddress(null);
+    setSocialWalletClient(null);
+    walletClientRef.current = null;
     localStorage.removeItem(SOCIAL_AUTH_KEY);
     localStorage.removeItem(SOCIAL_WALLET_KEY);
   }, []);
@@ -141,6 +180,7 @@ export function SocialAuthProvider({ children }: { children: ReactNode }) {
         loginWithGoogle,
         logoutSocial,
         socialAddress,
+        socialWalletClient,
         isSocialLoading,
       }}
     >
