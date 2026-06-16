@@ -73,7 +73,7 @@ export function SocialAuthProvider({ children }: { children: ReactNode }) {
 
       const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 
-      if (!clientId) {
+      if (!clientId || !clientId.includes(".apps.googleusercontent.com")) {
         const mockUser: SocialUser = {
           id: `google_${Date.now()}_${Math.random().toString(36).slice(2)}`,
           email: `user${Math.floor(Math.random() * 9999)}@gmail.com`,

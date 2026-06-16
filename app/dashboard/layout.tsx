@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { X, ArrowLeftRight } from "lucide-react";
 import { useWallet } from "../../context/WalletContext";
+import { useSocialAuth } from "../../context/SocialAuthContext";
 import DashboardSidebar, { navItems } from "../../components/layout/DashboardSidebar";
 import DashboardNavbar from "../../components/layout/DashboardNavbar";
 import BridgeAssetsModal from "../../components/dashboard/BridgeAssetsModal";
@@ -11,9 +12,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const pathname = usePathname();
   const { isConnected, isHydrated } = useWallet();
+  const { isSocialLogin } = useSocialAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bridgeOpen, setBridgeOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const isAuthorized = isConnected || isSocialLogin;
 
   useEffect(() => {
     setMounted(true);
@@ -27,11 +31,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!isHydrated) return;
-    if (!isConnected) router.replace("/");
-  }, [isConnected, isHydrated, router]);
+    if (!isAuthorized) router.replace("/");
+  }, [isAuthorized, isHydrated, router]);
 
   if (!isHydrated) return null;
-  if (!isConnected) return null;
+  if (!isAuthorized) return null;
 
   return (
     <div className="flex h-screen bg-neutral-100 overflow-hidden font-manrope">
@@ -104,9 +108,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             © {new Date().getFullYear()} Rubbi Protocol — The Architectural Archive of DeFi
           </p>
           <div className="flex gap-4 text-xs text-neutral-400">
-            <a href="#" className="hover:text-primary transition-colors">Docs</a>
-            <a href="#" className="hover:text-primary transition-colors">Twitter</a>
-            <a href="#" className="hover:text-primary transition-colors">Github</a>
+            <a href="/docs" className="hover:text-primary transition-colors">Docs</a>
           </div>
         </footer>
       </div>

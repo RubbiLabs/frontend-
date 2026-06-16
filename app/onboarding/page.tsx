@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Wallet, Mail, ArrowRight, Shield, Zap, CreditCard } from "lucide-react";
+import { Wallet, Mail, ArrowRight, Shield, Zap, CreditCard, AlertCircle } from "lucide-react";
 import { useWallet } from "../../context/WalletContext";
 import { useSocialAuth } from "../../context/SocialAuthContext";
 import { useToast } from "../../context/ToastContext";
@@ -12,13 +12,7 @@ export default function OnboardingPage() {
   const { isConnected, isHydrated, connect, isConnecting } = useWallet();
   const { loginWithGoogle, isSocialLogin, isSocialLoading } = useSocialAuth();
   const { success, error } = useToast();
-
-  useEffect(() => {
-    if (!isHydrated) return;
-    if (isConnected || isSocialLogin) {
-      router.replace("/dashboard");
-    }
-  }, [isConnected, isHydrated, isSocialLogin, router]);
+  const [socialError, setSocialError] = useState<string | null>(null);
 
   const handleWalletConnect = async () => {
     try {
@@ -31,16 +25,38 @@ export default function OnboardingPage() {
   };
 
   const handleGoogleLogin = async () => {
+    setSocialError(null);
     try {
       await loginWithGoogle();
       success("Signed in with Google!", "Redirecting to dashboard...");
       router.push("/dashboard");
     } catch (err: any) {
-      error("Sign-in Failed", err.message || "Please try again.");
+      const msg = err?.message || "Please try again.";
+      if (msg.includes("not configured") || msg.includes("NEXT_PUBLIC_SOCIAL_LOGIN_PRIVATE_KEY")) {
+        setSocialError("Google sign-in requires server configuration. Please use Connect Wallet instead, or contact the admin to set up Google OAuth.");
+      } else {
+        error("Sign-in Failed", msg);
+      }
     }
   };
 
-  if (!isHydrated || isConnected || isSocialLogin) return null;
+  const handleEmailLogin = async () => {
+    setSocialError(null);
+    try {
+      await loginWithGoogle();
+      success("Signed in!", "Redirecting to dashboard...");
+      router.push("/dashboard");
+    } catch (err: any) {
+      const msg = err?.message || "Please try again.";
+      if (msg.includes("not configured") || msg.includes("NEXT_PUBLIC_SOCIAL_LOGIN_PRIVATE_KEY")) {
+        setSocialError("Email sign-in requires server configuration. Please use Connect Wallet instead, or contact the admin to set up email authentication.");
+      } else {
+        error("Sign-in Failed", msg);
+      }
+    }
+  };
+
+  if (!isHydrated) return null;
 
   return (
     <div className="min-h-screen bg-neutral-50 font-manrope flex items-center justify-center p-6">
@@ -55,6 +71,16 @@ export default function OnboardingPage() {
           <h1 className="text-2xl font-extrabold text-neutral-900">Welcome to Rubbi</h1>
           <p className="text-sm text-neutral-500 mt-2">Choose how you'd like to get started</p>
         </div>
+
+        {socialError && (
+          <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+            <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Social Login Unavailable</p>
+              <p className="text-xs text-amber-600 mt-1">{socialError}</p>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-3">
           <button
@@ -93,7 +119,7 @@ export default function OnboardingPage() {
           </button>
 
           <button
-            onClick={handleGoogleLogin}
+            onClick={handleEmailLogin}
             disabled={isSocialLoading}
             className="w-full flex items-center gap-4 p-5 bg-white rounded-2xl border-2 border-neutral-200 hover:border-primary/40 hover:shadow-md transition-all group text-left"
           >

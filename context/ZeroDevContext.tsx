@@ -1,6 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { useAccount, useWalletClient } from "wagmi";
+import { useWalletClient } from "wagmi";
 import {
   createKernelAccount,
   createKernelAccountClient,
@@ -10,6 +10,7 @@ import { KERNEL_V3_1, getEntryPoint } from "@zerodev/sdk/constants";
 import { signerToEcdsaValidator } from "@zerodev/ecdsa-validator";
 import { createPublicClient, http } from "viem";
 import { getZeroDevRpc, ZERODEV_CHAIN } from "@/lib/zerodev";
+import { useWallet } from "@/context/WalletContext";
 
 interface ZeroDevContextValue {
   kernelClient: any | null;
@@ -28,7 +29,7 @@ const ZeroDevContext = createContext<ZeroDevContextValue>({
 });
 
 export function ZeroDevProvider({ children }: { children: React.ReactNode }) {
-  const { address, isConnected } = useAccount();
+  const { address: walletAddress, isConnected: walletConnected } = useWallet();
   const { data: walletClient } = useWalletClient();
   const [kernelClient, setKernelClient] = useState<any | null>(null);
   const [smartAccountAddress, setSmartAccountAddress] = useState<string | null>(null);
@@ -95,14 +96,14 @@ export function ZeroDevProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (isConnected && walletClient && address) {
-      initKernel(walletClient, address);
+    if (walletConnected && walletAddress && walletClient) {
+      initKernel(walletClient, walletAddress);
     } else {
       setKernelClient(null);
       setSmartAccountAddress(null);
       initializedRef.current = null;
     }
-  }, [isConnected, walletClient, address, initKernel]);
+  }, [walletConnected, walletAddress, walletClient, initKernel]);
 
   return (
     <ZeroDevContext.Provider

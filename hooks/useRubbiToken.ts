@@ -1,12 +1,17 @@
 "use client";
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from "wagmi";
+import { useReadContract } from "wagmi";
 import { useCallback } from "react";
+import { useAccount } from "wagmi";
+import { useZeroDev } from "@/context/ZeroDevContext";
+import { useToast } from "@/context/ToastContext";
 import { CONTRACTS } from "@/lib/contracts/config";
 import RubbiTokenABI from "@/Abis/RubbiToken.json";
 import ERC20ABI from "@/Abis/ERC20.json";
 
 export function useRubbiToken() {
   const { address } = useAccount();
+  const { kernelClient, isReady: isZeroDevReady } = useZeroDev();
+  const { showToast } = useToast();
 
   const { data: balance, refetch: refetchBalance } = useReadContract({
     address: CONTRACTS.rubbiToken,
@@ -32,65 +37,66 @@ export function useRubbiToken() {
     query: { enabled: !!address },
   });
 
-  const {
-    writeContract: writeClaim,
-    data: claimTxHash,
-    isPending: isClaiming,
-  } = useWriteContract();
-
-  const { isLoading: isClaimConfirming, isSuccess: claimSuccess } =
-    useWaitForTransactionReceipt({ hash: claimTxHash });
-
-  const claimFaucet = useCallback(() => {
-    writeClaim({
-      address: CONTRACTS.rubbiToken,
-      abi: RubbiTokenABI.abi,
-      functionName: "claimFaucet",
-    });
-  }, [writeClaim]);
-
-  const {
-    writeContract: writeApprove,
-    data: approveTxHash,
-    isPending: isApproving,
-  } = useWriteContract();
-
-  const { isLoading: isApproveConfirming } = useWaitForTransactionReceipt({
-    hash: approveTxHash,
-  });
+  const claimFaucet = useCallback(async () => {
+    if (!kernelClient || !isZeroDevReady) {
+      throw new Error("ZeroDev smart account not ready");
+    }
+    try {
+      const client = kernelClient as any;
+      const hash = await client.writeContract({
+        address: CONTRACTS.rubbiToken,
+        abi: RubbiTokenABI.abi,
+        functionName: "claimFaucet",
+      });
+      await client.waitForUserOperationReceipt({ hash, timeout: 120_000 });
+    } catch (err: any) {
+      showToast("error", "Claim Failed", err.message);
+      throw err;
+    }
+  }, [kernelClient, isZeroDevReady, showToast]);
 
   const approve = useCallback(
-    (spender: `0x${string}`, amount: bigint) => {
-      writeApprove({
-        address: CONTRACTS.rubbiToken,
-        abi: ERC20ABI.abi,
-        functionName: "approve",
-        args: [spender, amount],
-      });
+    async (spender: `0x${string}`, amount: bigint) => {
+      if (!kernelClient || !isZeroDevReady) {
+        throw new Error("ZeroDev smart account not ready");
+      }
+      try {
+        const client = kernelClient as any;
+        const hash = await client.writeContract({
+          address: CONTRACTS.rubbiToken,
+          abi: ERC20ABI.abi,
+          functionName: "approve",
+          args: [spender, amount],
+        });
+        await client.waitForUserOperationReceipt({ hash, timeout: 120_000 });
+      } catch (err: any) {
+        showToast("error", "Approve Failed", err.message);
+        throw err;
+      }
     },
-    [writeApprove]
+    [kernelClient, isZeroDevReady, showToast]
   );
 
-  const {
-    writeContract: writeTransfer,
-    data: transferTxHash,
-    isPending: isTransferring,
-  } = useWriteContract();
-
-  const { isLoading: isTransferConfirming } = useWaitForTransactionReceipt({
-    hash: transferTxHash,
-  });
-
   const transfer = useCallback(
-    (to: `0x${string}`, amount: bigint) => {
-      writeTransfer({
-        address: CONTRACTS.rubbiToken,
-        abi: ERC20ABI.abi,
-        functionName: "transfer",
-        args: [to, amount],
-      });
+    async (to: `0x${string}`, amount: bigint) => {
+      if (!kernelClient || !isZeroDevReady) {
+        throw new Error("ZeroDev smart account not ready");
+      }
+      try {
+        const client = kernelClient as any;
+        const hash = await client.writeContract({
+          address: CONTRACTS.rubbiToken,
+          abi: ERC20ABI.abi,
+          functionName: "transfer",
+          args: [to, amount],
+        });
+        await client.waitForUserOperationReceipt({ hash, timeout: 120_000 });
+      } catch (err: any) {
+        showToast("error", "Transfer Failed", err.message);
+        throw err;
+      }
     },
-    [writeTransfer]
+    [kernelClient, isZeroDevReady, showToast]
   );
 
   return {
@@ -100,11 +106,7 @@ export function useRubbiToken() {
     refetchFaucetCount,
     timeUntilNextClaim,
     claimFaucet,
-    isClaiming: isClaiming || isClaimConfirming,
-    claimSuccess,
     approve,
-    isApproving: isApproving || isApproveConfirming,
     transfer,
-    isTransferring: isTransferring || isTransferConfirming,
   };
 }

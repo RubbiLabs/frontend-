@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import LandingNavbar from "../../components/layout/LandingNavbar";
-import LandingFooter from "../../components/layout/LandingFooter";
+// import LandingFooter from "../../components/layout/LandingFooter";
 import { useWallet } from "../../context/WalletContext";
 import { BookOpen, Zap, CreditCard, Wallet, ArrowRight, Repeat, Shield, HelpCircle } from "lucide-react";
 
@@ -12,11 +12,31 @@ export default function DocsPage() {
   const [activeSection, setActiveSection] = useState("introduction");
 
   useEffect(() => {
-    if (!isHydrated) return;
-    if (isConnected) router.replace("/dashboard");
-  }, [isConnected, isHydrated, router]);
+    const sectionIds = [
+      "introduction", "getting-started", "dashboard-overview", "subscriptions",
+      "salary-streams", "virtual-card", "wallet-faucet", "token-swap",
+      "gasless-transactions", "smart-contracts", "faq",
+    ];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
+          }
+        });
+      },
+      { rootMargin: "-20% 0px -60% 0px" }
+    );
 
-  if (!isHydrated || isConnected) return null;
+    sectionIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  if (!isHydrated) return null;
 
   const sections = [
     { id: "introduction", label: "Introduction to Rubbi", icon: <BookOpen size={16} /> },
@@ -33,15 +53,15 @@ export default function DocsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-neutral-50 font-manrope overflow-x-hidden">
+    <div className="h-screen bg-neutral-50 font-manrope overflow-hidden flex flex-col">
       <LandingNavbar />
 
-      <div className="pt-24 pb-20">
-        <div className="px-6 lg:px-36">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="flex-1 pt-24 pb-8 overflow-hidden">
+        <div className="px-6 lg:px-36 h-full">
+          <div className="flex gap-8 h-full">
             {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-24">
+            <div className="w-64 shrink-0">
+              <div className="sticky top-0 h-full overflow-y-auto pr-2 pb-8 scrollbar-thin">
                 <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-sm">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-neutral-400 mb-4 px-3">Documentation</h3>
                   <nav className="space-y-1">
@@ -50,7 +70,8 @@ export default function DocsPage() {
                         key={section.id}
                         onClick={() => {
                           setActiveSection(section.id);
-                          document.getElementById(section.id)?.scrollIntoView({ behavior: "smooth" });
+                          const el = document.getElementById(section.id);
+                          if (el) el.scrollIntoView({ behavior: "smooth" });
                         }}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                           activeSection === section.id
@@ -67,8 +88,8 @@ export default function DocsPage() {
               </div>
             </div>
 
-            {/* Main Content */}
-            <div className="lg:col-span-3">
+            {/* Main Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto pr-2 pb-8 scrollbar-thin">
               <div className="max-w-3xl">
                 {/* Introduction */}
                 <section id="introduction" className="mb-16">
@@ -113,10 +134,10 @@ export default function DocsPage() {
                   <h2 className="text-2xl lg:text-3xl font-extrabold text-neutral-900 mb-6">Getting Started</h2>
                   <div className="prose prose-neutral max-w-none">
                     <p className="text-neutral-600 leading-relaxed mb-4">
-                      Follow these steps to start using Rubbi and begin automating your financial workflows.
+                      Rubbi offers multiple ways to get started. Choose the method that works best for you.
                     </p>
                     
-                    <h3 className="text-xl font-bold text-neutral-900 mb-3">Step 1: Connect Your Wallet</h3>
+                    <h3 className="text-xl font-bold text-neutral-900 mb-3">Option 1: Connect Wallet</h3>
                     <p className="text-neutral-600 leading-relaxed mb-4">
                       Click the &quot;Begin Automation&quot; button on the landing page or navigate to the dashboard. 
                       You&apos;ll be prompted to connect your Web3 wallet (MetaMask, Coinbase Wallet, or WalletConnect compatible wallets).
@@ -127,9 +148,39 @@ export default function DocsPage() {
                       </p>
                     </div>
 
-                    <h3 className="text-xl font-bold text-neutral-900 mb-3">Step 2: Complete Onboarding</h3>
+                    <h3 className="text-xl font-bold text-neutral-900 mb-3">Option 2: Continue with Google</h3>
                     <p className="text-neutral-600 leading-relaxed mb-4">
-                      After connecting, you&apos;ll go through a quick onboarding process where you can:
+                      Sign in with your Google account — no Web3 wallet needed. Rubbi creates a secure smart contract 
+                      wallet tied to your Google identity. This is the easiest way to get started.
+                    </p>
+                    <ol className="list-decimal list-inside text-neutral-600 mb-6 space-y-2">
+                      <li>Click &quot;Continue with Google&quot; on the onboarding page</li>
+                      <li>Sign in with your Google account in the popup</li>
+                      <li>A smart contract wallet is automatically created for you</li>
+                      <li>You&apos;re redirected to the dashboard — ready to use all features</li>
+                    </ol>
+                    <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-6">
+                      <p className="text-sm text-neutral-600">
+                        <strong>Note:</strong> Your Google-linked wallet is a smart contract account that supports 
+                        gasless transactions. You can use all Rubbi features without holding ETH for gas.
+                      </p>
+                    </div>
+
+                    <h3 className="text-xl font-bold text-neutral-900 mb-3">Option 3: Continue with Email</h3>
+                    <p className="text-neutral-600 leading-relaxed mb-4">
+                      Use your email address to create a wallet automatically. An OTP will be sent to your email 
+                      for verification. This method also creates a smart contract wallet with full gasless support.
+                    </p>
+                    <ol className="list-decimal list-inside text-neutral-600 mb-6 space-y-2">
+                      <li>Click &quot;Continue with Email&quot; on the onboarding page</li>
+                      <li>Enter your email address</li>
+                      <li>Verify the OTP sent to your inbox</li>
+                      <li>Your wallet is created and you&apos;re ready to go</li>
+                    </ol>
+
+                    <h3 className="text-xl font-bold text-neutral-900 mb-3">Complete Onboarding</h3>
+                    <p className="text-neutral-600 leading-relaxed mb-4">
+                      After connecting with any method, you&apos;ll go through a quick onboarding process where you can:
                     </p>
                     <ul className="list-disc list-inside text-neutral-600 mb-4 space-y-1">
                       <li>Set your username and profile</li>
@@ -137,7 +188,7 @@ export default function DocsPage() {
                       <li>Claim testnet tokens from the faucet (on testnet)</li>
                     </ul>
 
-                    <h3 className="text-xl font-bold text-neutral-900 mb-3">Step 3: Navigate the Dashboard</h3>
+                    <h3 className="text-xl font-bold text-neutral-900 mb-3">Navigate the Dashboard</h3>
                     <p className="text-neutral-600 leading-relaxed">
                       Once onboarded, you&apos;ll have access to the full dashboard with all features. 
                       The sidebar provides quick access to Subscriptions, Salary Streams, Virtual Card, Wallet, and Swap functionality.
@@ -529,7 +580,7 @@ export default function DocsPage() {
         </div>
       </div>
 
-      <LandingFooter />
+      {/* <LandingFooter /> */}
     </div>
   );
 }
