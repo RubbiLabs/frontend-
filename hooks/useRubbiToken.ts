@@ -1,15 +1,15 @@
 "use client";
 import { useReadContract } from "wagmi";
 import { useCallback } from "react";
-import { useAccount } from "wagmi";
 import { useZeroDev } from "@/context/ZeroDevContext";
 import { useToast } from "@/context/ToastContext";
+import { useEffectiveAddress } from "@/hooks/useEffectiveAddress";
 import { CONTRACTS } from "@/lib/contracts/config";
 import RubbiTokenABI from "@/Abis/RubbiToken.json";
 import ERC20ABI from "@/Abis/ERC20.json";
 
 export function useRubbiToken() {
-  const { address } = useAccount();
+  const address = useEffectiveAddress();
   const { kernelClient, isReady: isZeroDevReady } = useZeroDev();
   const { showToast } = useToast();
 

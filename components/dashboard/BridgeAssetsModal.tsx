@@ -79,7 +79,7 @@ export default function BridgeAssetsModal({ open, onClose }: Props) {
   const [tokenOpen, setTokenOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
-  const meta = tokenMeta[inputToken];
+  const meta = tokenMeta[inputToken as SwapToken];
   const hasInput = inputAmount && Number(inputAmount) > 0;
   const hasOutput = estimatedOutput > 0n;
 

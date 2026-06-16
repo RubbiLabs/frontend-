@@ -11,6 +11,9 @@ import ERC20ABI from "@/Abis/ERC20.json";
 import type { SwapToken } from "@/types";
 import { useToast } from "@/context/ToastContext";
 import { useZeroDev } from "@/context/ZeroDevContext";
+import { useWallet } from "@/context/WalletContext";
+import { useSocialAuth } from "@/context/SocialAuthContext";
+import { useTransactionModal } from "@/context/TransactionModalContext";
 import { trackSwapEvent, trackTransaction } from "@/components/dashboard/DuneAnalytics";
 
 const UNISWAP_V2_ROUTER =
@@ -27,10 +30,16 @@ function toDeadline(seconds: number): bigint {
 }
 
 export function useSwap() {
-  const { address } = useAccount();
+  const { address: wagmiAddress } = useAccount();
   const chainId = useChainId();
   const { showToast } = useToast();
   const { kernelClient, isReady: isZeroDevReady, isLoading: isZeroDevLoading, error: zeroDevError } = useZeroDev();
+  const { address: walletAddress } = useWallet();
+  const { isSocialLogin, socialAddress } = useSocialAuth();
+  const { showTxModal, setTxStatus, hideTxModal } = useTransactionModal();
+
+  const address = isSocialLogin ? socialAddress : (wagmiAddress || walletAddress);
+  const effectiveAddress = address || undefined;
 
   const [inputToken, setInputToken] = useState<SwapToken>("ETH");
   const [inputAmount, setInputAmount] = useState("");
@@ -40,7 +49,7 @@ export function useSwap() {
   const [swapTxHash, setSwapTxHash] = useState<string | null>(null);
 
   const wethAddress = WETH_ADDRESS || undefined;
-  const { data: ethBalance } = useBalance({ address });
+  const { data: ethBalance } = useBalance({ address: effectiveAddress });
   const arbAddress = ARB_TOKEN_ADDRESS || undefined;
 
   const { data: arbBalance } = useReadContract({
@@ -119,6 +128,7 @@ export function useSwap() {
     }
 
     setApproveLoading(true);
+    showTxModal({ type: "approve", title: "Approving Token", description: "Submitting approval via gasless relay..." });
     try {
       const client = kernelClient as any;
       const hash = await client.writeContract({
@@ -127,17 +137,20 @@ export function useSwap() {
         functionName: "approve",
         args: [UNISWAP_V2_ROUTER, maxUint256],
       });
-      showToast("info", "Approval Submitted", "Waiting for confirmation...");
+      setTxStatus("confirming", "Waiting for approval confirmation...");
       await client.waitForUserOperationReceipt({ hash, timeout: 120_000 });
+      setTxStatus("success", `${inputToken} approved for swapping!`, hash);
       showToast("success", "Approval Confirmed", `${inputToken} approved for swapping.`);
       refetchAllowance();
     } catch (err: any) {
       console.error("[Swap] Approve failed:", err);
-      showToast("error", "Approval Failed", err?.message || "Transaction was rejected or failed on-chain.");
+      const msg = err?.message || "Transaction was rejected or failed on-chain.";
+      setTxStatus("error", msg, undefined, msg);
+      showToast("error", "Approval Failed", msg);
     } finally {
       setApproveLoading(false);
     }
-  }, [arbAddress, showToast, kernelClient, isZeroDevReady, isZeroDevLoading, zeroDevError, inputToken, refetchAllowance]);
+  }, [arbAddress, showToast, kernelClient, isZeroDevReady, isZeroDevLoading, zeroDevError, inputToken, refetchAllowance, showTxModal, setTxStatus]);
 
   const swap = useCallback(async () => {
     if (!address || !UNISWAP_V2_ROUTER || !RUB_TOKEN_ADDRESS) return;
@@ -158,13 +171,14 @@ export function useSwap() {
 
     const deadline = toDeadline(600);
     setSwapLoading(true);
+    const swapLabel = inputToken === "ETH" ? "ETH→RUB" : "ARB→RUB";
+    showTxModal({ type: "swap", title: `Swapping ${swapLabel}`, description: `Submitting ${swapLabel} swap via gasless relay...` });
 
     try {
       const client = kernelClient as any;
       let hash;
 
       if (inputToken === "ETH") {
-        showToast("info", "Swapping...", "Submitting ETH→RUB swap via gasless transaction.");
         hash = await client.writeContract({
           address: UNISWAP_V2_ROUTER,
           abi: RouterABI.abi,
@@ -173,7 +187,6 @@ export function useSwap() {
           value: inputAmountBigInt,
         });
       } else {
-        showToast("info", "Swapping...", "Submitting ARB→RUB swap via gasless transaction.");
         hash = await client.writeContract({
           address: UNISWAP_V2_ROUTER,
           abi: RouterABI.abi,
@@ -182,7 +195,7 @@ export function useSwap() {
         });
       }
 
-      showToast("info", "Transaction Submitted", "Waiting for on-chain confirmation...");
+      setTxStatus("confirming", "Waiting for on-chain confirmation...");
       await client.waitForUserOperationReceipt({ hash, timeout: 120_000 });
 
       const outputAmount = Number(estimatedOutput) / 1e18;
@@ -191,11 +204,14 @@ export function useSwap() {
 
       setSwapTxHash(hash);
       setInputAmount("");
+      setTxStatus("success", `Swapped ${inputToken} for ${outputAmount.toFixed(2)} RUB!`, hash);
       showToast("success", "Swap Complete!", `Successfully swapped ${inputToken} for ${outputAmount.toFixed(2)} RUB.`);
       refetchAllowance();
     } catch (err: any) {
       console.error("[Swap] Swap failed:", err);
-      showToast("error", "Swap Failed", err?.message || "Transaction was rejected or failed on-chain.");
+      const msg = err?.message || "Transaction was rejected or failed on-chain.";
+      setTxStatus("error", msg, undefined, msg);
+      showToast("error", "Swap Failed", msg);
     } finally {
       setSwapLoading(false);
     }
@@ -212,6 +228,8 @@ export function useSwap() {
     isZeroDevLoading,
     zeroDevError,
     refetchAllowance,
+    showTxModal,
+    setTxStatus,
   ]);
 
   const inputBalance =

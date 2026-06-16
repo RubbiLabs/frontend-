@@ -1,6 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
+    ],
+  },
   turbopack: {},
   experimental: {
     turbopackFileSystemCacheForDev: false,
@@ -8,20 +16,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-
-
-// import type { NextConfig } from "next";
-
-// const nextConfig: NextConfig = {
-//   webpack: (config) => {
-//     config.resolve.fallback = {
-//       ...config.resolve.fallback,
-//       fs: false,
-//       net: false,
-//       tls: false,
-//     };
-//     return config;
-//   },
-// };
-
-// export default nextConfig;

@@ -2,16 +2,19 @@
 
 import { useSwitchChain, useChainId } from "wagmi";
 import { useToast } from "@/context/ToastContext";
-import { useAccount } from "wagmi";
+import { useWallet } from "@/context/WalletContext";
+import { useSocialAuth } from "@/context/SocialAuthContext";
 
 export const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 
 export function useNetworkSwitch() {
   const { switchChain, isPending } = useSwitchChain();
   const { showToast } = useToast();
-  const { isConnected } = useAccount();
+  const { isConnected } = useWallet();
+  const { isSocialLogin } = useSocialAuth();
   const chainId = useChainId();
   const isCorrectNetwork = chainId === ARBITRUM_SEPOLIA_CHAIN_ID;
+  const connected = isConnected || isSocialLogin;
 
   const switchToArbitrum = () => {
     try {
@@ -26,6 +29,6 @@ export function useNetworkSwitch() {
     isPending,
     switchToArbitrum,
     ARBITRUM_SEPOLIA_CHAIN_ID,
-    isConnected,
+    isConnected: connected,
   };
 }
